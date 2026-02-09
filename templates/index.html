@@ -344,6 +344,10 @@
     
     <script>
         let currentData = [];
+        let currentPage = 1;
+        let itemsPerPage = 10;
+        let sortColumn = 'category_code';  // Default sort by category
+        let sortDirection = 'asc';
         
         function showLoading(section) {
             document.getElementById(`${section}-loading`).classList.add('active');
@@ -368,19 +372,53 @@
             clearAlert(section);
             if (section === 'fetch' || section === 'generate') {
                 currentData = [];
+                currentPage = 1;
             }
         }
         
-        function displayResults(section, data) {
-            if (!data || data.length === 0) {
+        function sortData(column) {
+            if (sortColumn === column) {
+                // Toggle direction if same column
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                // New column, default to ascending
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            
+            currentData.sort((a, b) => {
+                let aVal = a[column] || '';
+                let bVal = b[column] || '';
+                
+                // Convert to string for comparison
+                aVal = String(aVal).toLowerCase();
+                bVal = String(bVal).toLowerCase();
+                
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            currentPage = 1;  // Reset to first page when sorting
+            displayCurrentPage();
+        }
+        
+        function displayCurrentPage() {
+            const section = currentData.length > 0 ? 'fetch' : 'generate';
+            const resultsDiv = document.getElementById(`${section}-results`);
+            
+            if (!currentData || currentData.length === 0) {
                 showAlert(section, '沒有找到結果', 'info');
                 return;
             }
             
-            currentData = Array.isArray(data) ? data : [data];
-            
-            const resultsDiv = document.getElementById(`${section}-results`);
             resultsDiv.classList.remove('hidden');
+            
+            // Calculate pagination
+            const totalPages = Math.ceil(currentData.length / itemsPerPage);
+            const startIdx = (currentPage - 1) * itemsPerPage;
+            const endIdx = Math.min(startIdx + itemsPerPage, currentData.length);
+            const pageData = currentData.slice(startIdx, endIdx);
             
             let html = `
                 <div class="row" style="margin-bottom: 20px;">
@@ -401,22 +439,42 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>CPE 編號</th>
-                                <th>供應商</th>
-                                <th>產品名稱</th>
-                                <th>版本號</th>
-                                <th>其他欄位</th>
-                                <th>大小 (MB)</th>
-                                <th>安裝日期</th>
-                                <th>安裝位置</th>
+                                <th onclick="sortData('category_code')" style="cursor: pointer;">
+                                    類別 ${sortColumn === 'category_code' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('cpe')" style="cursor: pointer;">
+                                    CPE 編號 ${sortColumn === 'cpe' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('vendor')" style="cursor: pointer;">
+                                    供應商 ${sortColumn === 'vendor' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('product')" style="cursor: pointer;">
+                                    產品名稱 ${sortColumn === 'product' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('version')" style="cursor: pointer;">
+                                    版本號 ${sortColumn === 'version' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('other_fields')" style="cursor: pointer;">
+                                    其他欄位 ${sortColumn === 'other_fields' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('size_mb')" style="cursor: pointer;">
+                                    大小 (MB) ${sortColumn === 'size_mb' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('install_date')" style="cursor: pointer;">
+                                    安裝日期 ${sortColumn === 'install_date' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
+                                <th onclick="sortData('install_location')" style="cursor: pointer;">
+                                    安裝位置 ${sortColumn === 'install_location' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
             `;
             
-            currentData.forEach(item => {
+            pageData.forEach(item => {
                 html += `
                     <tr>
+                        <td><strong>${item.category}</strong></td>
                         <td style="font-family: monospace; font-size: 0.9em;">${item.cpe}</td>
                         <td><strong>${item.vendor}</strong></td>
                         <td>${item.product}</td>
@@ -435,7 +493,57 @@
                 </div>
             `;
             
+            // Add pagination controls
+            if (totalPages > 1) {
+                html += `
+                    <div style="margin-top: 20px; text-align: center;">
+                        <div style="display: inline-flex; gap: 10px; align-items: center;">
+                            <button class="btn-secondary" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} 
+                                    style="${currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+                                上一頁
+                            </button>
+                            <span style="font-weight: bold; padding: 0 15px;">
+                                第 ${currentPage} 頁 / 共 ${totalPages} 頁 (顯示 ${startIdx + 1}-${endIdx} 筆，共 ${currentData.length} 筆)
+                            </span>
+                            <button class="btn-secondary" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}
+                                    style="${currentPage === totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+                                下一頁
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
             resultsDiv.innerHTML = html;
+        }
+        
+        function changePage(newPage) {
+            const totalPages = Math.ceil(currentData.length / itemsPerPage);
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                displayCurrentPage();
+            }
+        }
+        
+        function displayResults(section, data) {
+            if (!data || data.length === 0) {
+                showAlert(section, '沒有找到結果', 'info');
+                return;
+            }
+            
+            currentData = Array.isArray(data) ? data : [data];
+            
+            // Apply default sort by category
+            sortColumn = 'category_code';
+            sortDirection = 'asc';
+            currentData.sort((a, b) => {
+                const aVal = a[sortColumn] || '';
+                const bVal = b[sortColumn] || '';
+                return aVal < bVal ? -1 : (aVal > bVal ? 1 : 0);
+            });
+            
+            currentPage = 1;
+            displayCurrentPage();
         }
         
         async function autoFetchCPE() {

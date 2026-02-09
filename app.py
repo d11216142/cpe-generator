@@ -20,10 +20,9 @@ COMMON_VENDORS = [
 PRODUCT_PREFIXES = ['server', 'client', 'pro', 'enterprise', 'professional', 'community', 'standard', 'ultimate']
 PRODUCT_TYPES = ['suite', 'manager', 'viewer', 'editor', 'player', 'reader', 'browser', 'office', 'database', 'framework']
 
-# CPE Dictionary - Sample CPE entries representing real-world software
+# CPE Dictionary - Sample CPE entries representing real-world software, hardware and OS
 CPE_DICTIONARY = [
-    'cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*',
-    'cpe:2.3:a:microsoft:windows:11:*:*:*:*:*:*:*',
+    # Applications (a)
     'cpe:2.3:a:microsoft:office:2019:*:*:*:*:*:*:*',
     'cpe:2.3:a:microsoft:office:2021:sp1:*:*:professional:*:*:*',
     'cpe:2.3:a:microsoft:edge:120.0.2210.91:*:*:*:*:*:*:*',
@@ -71,7 +70,59 @@ CPE_DICTIONARY = [
     'cpe:2.3:a:steam:steam:1702689516:*:*:*:*:*:*:*',
     'cpe:2.3:a:discord:discord:0.0.309:*:*:*:*:*:*:*',
     'cpe:2.3:a:malwarebytes:anti-malware:4.6.3:*:*:*:premium:*:*:*',
-    'cpe:2.3:a:ccleaner:ccleaner:6.19.10858:*:*:*:free:*:*:*'
+    'cpe:2.3:a:ccleaner:ccleaner:6.19.10858:*:*:*:free:*:*:*',
+    
+    # Operating Systems (o)
+    'cpe:2.3:o:microsoft:windows_10:21h2:*:*:*:*:*:*:*',
+    'cpe:2.3:o:microsoft:windows_11:22h2:*:*:*:*:*:*:*',
+    'cpe:2.3:o:microsoft:windows_server_2022:*:*:*:*:*:*:*:*',
+    'cpe:2.3:o:microsoft:windows_server_2019:*:*:*:*:*:*:*:*',
+    'cpe:2.3:o:apple:macos:14.2:*:*:*:*:*:*:*',
+    'cpe:2.3:o:apple:macos:13.6:*:*:*:*:*:*:*',
+    'cpe:2.3:o:apple:ios:17.2:*:*:*:*:*:*:*',
+    'cpe:2.3:o:apple:ipados:17.2:*:*:*:*:*:*:*',
+    'cpe:2.3:o:canonical:ubuntu_linux:22.04:*:*:*:lts:*:*:*',
+    'cpe:2.3:o:canonical:ubuntu_linux:20.04:*:*:*:lts:*:*:*',
+    'cpe:2.3:o:debian:debian_linux:12:*:*:*:*:*:*:*',
+    'cpe:2.3:o:debian:debian_linux:11:*:*:*:*:*:*:*',
+    'cpe:2.3:o:redhat:enterprise_linux:9.0:*:*:*:*:*:*:*',
+    'cpe:2.3:o:redhat:enterprise_linux:8.0:*:*:*:*:*:*:*',
+    'cpe:2.3:o:centos:centos:8:*:*:*:*:*:*:*',
+    'cpe:2.3:o:centos:centos:7:*:*:*:*:*:*:*',
+    'cpe:2.3:o:fedoraproject:fedora:39:*:*:*:*:*:*:*',
+    'cpe:2.3:o:fedoraproject:fedora:38:*:*:*:*:*:*:*',
+    'cpe:2.3:o:opensuse:leap:15.5:*:*:*:*:*:*:*',
+    'cpe:2.3:o:oracle:linux:8:*:*:*:*:*:*:*',
+    'cpe:2.3:o:google:android:14.0:*:*:*:*:*:*:*',
+    'cpe:2.3:o:google:android:13.0:*:*:*:*:*:*:*',
+    'cpe:2.3:o:freebsd:freebsd:14.0:*:*:*:*:*:*:*',
+    'cpe:2.3:o:netbsd:netbsd:10.0:*:*:*:*:*:*:*',
+    
+    # Hardware (h)
+    'cpe:2.3:h:cisco:catalyst_9300:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:cisco:catalyst_2960:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:cisco:nexus_9000:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:hp:laserjet_pro_m404:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:hp:officejet_pro_9015:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:dell:poweredge_r750:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:dell:poweredge_r640:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:lenovo:thinkpad_x1_carbon:gen11:*:*:*:*:*:*:*',
+    'cpe:2.3:h:lenovo:thinkpad_t14:gen3:*:*:*:*:*:*:*',
+    'cpe:2.3:h:apple:macbook_pro:2023:*:*:*:*:*:*:*',
+    'cpe:2.3:h:apple:macbook_air:2023:*:*:*:*:*:*:*',
+    'cpe:2.3:h:apple:iphone_15:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:apple:ipad_pro:2023:*:*:*:*:*:*:*',
+    'cpe:2.3:h:samsung:galaxy_s23:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:samsung:galaxy_tab_s9:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:intel:core_i9-13900k:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:intel:core_i7-13700k:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:amd:ryzen_9_7950x:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:amd:ryzen_7_7700x:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:nvidia:geforce_rtx_4090:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:nvidia:geforce_rtx_4080:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:asus:rog_strix_b650e:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:juniper:srx4100:*:*:*:*:*:*:*:*',
+    'cpe:2.3:h:fortinet:fortigate_600e:*:*:*:*:*:*:*:*'
 ]
 
 def parse_cpe_uri(cpe_string):
@@ -87,8 +138,19 @@ def parse_cpe_uri(cpe_string):
         if len(parts) < 5:
             return None
         
+        # Extract category (part type: a, o, h)
+        part_type = parts[2] if len(parts) > 2 else ''
+        category_map = {
+            'a': 'Application',
+            'o': 'Operating System',
+            'h': 'Hardware'
+        }
+        category = category_map.get(part_type, 'Unknown')
+        
         result = {
             'cpe': cpe_string,
+            'category': category,
+            'category_code': part_type,
             'vendor': parts[3] if len(parts) > 3 and parts[3] != '*' else '',
             'product': parts[4] if len(parts) > 4 and parts[4] != '*' else '',
             'version': parts[5] if len(parts) > 5 and parts[5] != '*' else '',
@@ -240,14 +302,48 @@ def auto_fetch_cpe():
     """
     Auto-fetch CPE entries from CPE dictionary
     Expected input: count (number of CPE entries to fetch, default 10)
+    Tries to evenly distribute h, o, a types
     """
     try:
         data = request.json
         count = data.get('count', 10)
         count = min(max(1, count), 100)  # Limit between 1 and 100
         
-        # Randomly select CPE entries from the dictionary
-        selected_cpes = random.sample(CPE_DICTIONARY, min(count, len(CPE_DICTIONARY)))
+        # Separate CPEs by category
+        cpe_by_category = {'a': [], 'o': [], 'h': []}
+        for cpe_string in CPE_DICTIONARY:
+            parts = cpe_string.split(':')
+            if len(parts) > 2:
+                category = parts[2]
+                if category in cpe_by_category:
+                    cpe_by_category[category].append(cpe_string)
+        
+        # Calculate distribution for even split
+        per_category = count // 3
+        remainder = count % 3
+        
+        selected_cpes = []
+        
+        # Select evenly from each category
+        for idx, (category, cpes) in enumerate(cpe_by_category.items()):
+            # Add extra items to first categories for remainder
+            category_count = per_category + (1 if idx < remainder else 0)
+            if cpes:
+                # Select random CPEs from this category
+                available = min(category_count, len(cpes))
+                selected = random.sample(cpes, available)
+                selected_cpes.extend(selected)
+        
+        # If we don't have enough CPEs, fill from any available
+        if len(selected_cpes) < count:
+            all_cpes = [cpe for cpes in cpe_by_category.values() for cpe in cpes]
+            remaining_cpes = [cpe for cpe in all_cpes if cpe not in selected_cpes]
+            if remaining_cpes:
+                additional = min(count - len(selected_cpes), len(remaining_cpes))
+                selected_cpes.extend(random.sample(remaining_cpes, additional))
+        
+        # Shuffle to randomize order
+        random.shuffle(selected_cpes)
         
         results = []
         for cpe_string in selected_cpes:
@@ -358,7 +454,7 @@ def export_csv():
         
         # Write header
         writer.writerow([
-            'CPE', 'Vendor', 'Product', 'Version', 
+            'CPE', 'Category', 'Vendor', 'Product', 'Version', 
             'Other Fields', 'Size (MB)', 'Install Date', 'Install Location'
         ])
         
@@ -366,6 +462,7 @@ def export_csv():
         for item in cpe_data:
             writer.writerow([
                 item.get('cpe', ''),
+                item.get('category', ''),
                 item.get('vendor', ''),
                 item.get('product', ''),
                 item.get('version', ''),

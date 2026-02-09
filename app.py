@@ -4,8 +4,11 @@ import re
 import random
 import csv
 import io
+import json
 from datetime import datetime, timedelta
 from urllib.parse import quote
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill
 
 app = Flask(__name__)
 
@@ -284,13 +287,30 @@ def generate_random_cpe():
         # Sometimes use a similar existing CPE
         cpe_string = random.choice(similar_cpes)
     
-    return {
-        'vendor': vendor,
-        'product': product,
-        'version': version,
-        'cpe': cpe_string,
-        **generate_installation_metadata()
-    }
+    # Parse the CPE to get category and other fields
+    parsed = parse_cpe_uri(cpe_string)
+    if parsed:
+        return {
+            'cpe': cpe_string,
+            'category': parsed.get('category', 'Application'),
+            'category_code': parsed.get('category_code', 'a'),
+            'vendor': vendor,
+            'product': product,
+            'version': version,
+            'other_fields': parsed.get('other_fields', 'None'),
+            **generate_installation_metadata()
+        }
+    else:
+        return {
+            'cpe': cpe_string,
+            'category': 'Application',
+            'category_code': 'a',
+            'vendor': vendor,
+            'product': product,
+            'version': version,
+            'other_fields': 'None',
+            **generate_installation_metadata()
+        }
 
 @app.route('/')
 def index():
@@ -479,6 +499,101 @@ def export_csv():
             mimetype='text/csv',
             as_attachment=True,
             download_name=f'cpe_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export-xlsx', methods=['POST'])
+def export_xlsx():
+    """
+    Export CPE data to XLSX
+    """
+    try:
+        data = request.json
+        cpe_data = data.get('data', [])
+        
+        if not cpe_data:
+            return jsonify({'error': 'No data to export'}), 400
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "CPE Data"
+        
+        # Define header style
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Write header
+        headers = ['CPE', 'Category', 'Vendor', 'Product', 'Version', 
+                   'Other Fields', 'Size (MB)', 'Install Date', 'Install Location']
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = header
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Write data
+        for row_num, item in enumerate(cpe_data, 2):
+            ws.cell(row=row_num, column=1, value=item.get('cpe', ''))
+            ws.cell(row=row_num, column=2, value=item.get('category', ''))
+            ws.cell(row=row_num, column=3, value=item.get('vendor', ''))
+            ws.cell(row=row_num, column=4, value=item.get('product', ''))
+            ws.cell(row=row_num, column=5, value=item.get('version', ''))
+            ws.cell(row=row_num, column=6, value=item.get('other_fields', ''))
+            ws.cell(row=row_num, column=7, value=item.get('size_mb', ''))
+            ws.cell(row=row_num, column=8, value=item.get('install_date', ''))
+            ws.cell(row=row_num, column=9, value=item.get('install_location', ''))
+        
+        # Auto-adjust column widths
+        for col in ws.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except Exception:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column].width = adjusted_width
+        
+        # Save to bytes
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'cpe_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export-json', methods=['POST'])
+def export_json():
+    """
+    Export CPE data to JSON
+    """
+    try:
+        data = request.json
+        cpe_data = data.get('data', [])
+        
+        if not cpe_data:
+            return jsonify({'error': 'No data to export'}), 400
+        
+        # Create JSON with proper formatting
+        json_output = json.dumps(cpe_data, indent=2, ensure_ascii=False)
+        
+        return send_file(
+            io.BytesIO(json_output.encode('utf-8')),
+            mimetype='application/json',
+            as_attachment=True,
+            download_name=f'cpe_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
         )
     except Exception as e:
         return jsonify({'error': str(e)}), 500

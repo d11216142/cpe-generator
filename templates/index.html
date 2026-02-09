@@ -296,6 +296,12 @@
                     <button class="btn-secondary" onclick="clearResults('fetch')">清除結果</button>
                 </div>
                 
+                <div id="fetch-export" class="button-group" style="margin-top: 15px; display: none;">
+                    <button class="btn-success" onclick="exportData('fetch', 'csv')">📥 下載 CSV</button>
+                    <button class="btn-success" onclick="exportData('fetch', 'xlsx')">📥 下載 XLSX</button>
+                    <button class="btn-success" onclick="exportData('fetch', 'json')">📥 下載 JSON</button>
+                </div>
+                
                 <div id="fetch-loading" class="loading">
                     <div class="spinner"></div>
                     <p style="margin-top: 10px;">處理中...</p>
@@ -322,6 +328,12 @@
                     <button class="btn-secondary" onclick="clearResults('generate')">清除結果</button>
                 </div>
                 
+                <div id="generate-export" class="button-group" style="margin-top: 15px; display: none;">
+                    <button class="btn-success" onclick="exportData('generate', 'csv')">📥 下載 CSV</button>
+                    <button class="btn-success" onclick="exportData('generate', 'xlsx')">📥 下載 XLSX</button>
+                    <button class="btn-success" onclick="exportData('generate', 'json')">📥 下載 JSON</button>
+                </div>
+                
                 <div id="generate-loading" class="loading">
                     <div class="spinner"></div>
                     <p style="margin-top: 10px;">產生中...</p>
@@ -330,20 +342,14 @@
                 <div id="generate-alert"></div>
                 <div id="generate-results" class="results hidden"></div>
             </div>
-            
-            <!-- Export Section -->
-            <div class="section" style="background: #e8f5e9; border-left-color: #28a745;">
-                <h2 class="section-title">📥 匯出資料</h2>
-                <p style="margin-bottom: 15px; color: #666;">
-                    點擊下方按鈕，將當前顯示的 CPE 資料匯出為 CSV 檔案
-                </p>
-                <button class="btn-success" onclick="exportToCSV()">下載 CSV 檔案</button>
-            </div>
         </div>
     </div>
     
     <script>
+        let fetchData = [];
+        let generateData = [];
         let currentData = [];
+        let currentSection = null;
         let currentPage = 1;
         let itemsPerPage = 10;
         let sortColumn = 'category_code';  // Default sort by category
@@ -370,10 +376,24 @@
             document.getElementById(`${section}-results`).classList.add('hidden');
             document.getElementById(`${section}-results`).innerHTML = '';
             clearAlert(section);
-            if (section === 'fetch' || section === 'generate') {
-                currentData = [];
-                currentPage = 1;
+            if (section === 'fetch') {
+                fetchData = [];
+                if (currentSection === 'fetch') {
+                    currentData = [];
+                    currentSection = null;
+                }
+                // Hide export buttons for fetch
+                document.getElementById('fetch-export').style.display = 'none';
+            } else if (section === 'generate') {
+                generateData = [];
+                if (currentSection === 'generate') {
+                    currentData = [];
+                    currentSection = null;
+                }
+                // Hide export buttons for generate
+                document.getElementById('generate-export').style.display = 'none';
             }
+            currentPage = 1;
         }
         
         function sortData(column) {
@@ -404,11 +424,10 @@
         }
         
         function displayCurrentPage() {
-            const section = currentData.length > 0 ? 'fetch' : 'generate';
-            const resultsDiv = document.getElementById(`${section}-results`);
+            const resultsDiv = document.getElementById(`${currentSection}-results`);
             
             if (!currentData || currentData.length === 0) {
-                showAlert(section, '沒有找到結果', 'info');
+                showAlert(currentSection, '沒有找到結果', 'info');
                 return;
             }
             
@@ -531,7 +550,20 @@
                 return;
             }
             
-            currentData = Array.isArray(data) ? data : [data];
+            // Store data in section-specific variable
+            if (section === 'fetch') {
+                fetchData = Array.isArray(data) ? data : [data];
+                currentData = fetchData;
+                // Show export buttons for fetch
+                document.getElementById('fetch-export').style.display = 'flex';
+            } else if (section === 'generate') {
+                generateData = Array.isArray(data) ? data : [data];
+                currentData = generateData;
+                // Show export buttons for generate
+                document.getElementById('generate-export').style.display = 'flex';
+            }
+            
+            currentSection = section;
             
             // Apply default sort by category
             sortColumn = 'category_code';
@@ -616,19 +648,33 @@
             }
         }
         
-        async function exportToCSV() {
-            if (currentData.length === 0) {
+        async function exportData(section, format) {
+            const data = section === 'fetch' ? fetchData : generateData;
+            
+            if (!data || data.length === 0) {
                 alert('沒有資料可以匯出。請先解析或產生 CPE 資料。');
                 return;
             }
             
+            const formatMap = {
+                'csv': { endpoint: '/api/export-csv', ext: 'csv' },
+                'xlsx': { endpoint: '/api/export-xlsx', ext: 'xlsx' },
+                'json': { endpoint: '/api/export-json', ext: 'json' }
+            };
+            
+            const formatInfo = formatMap[format];
+            if (!formatInfo) {
+                alert('不支援的匯出格式');
+                return;
+            }
+            
             try {
-                const response = await fetch('/api/export-csv', {
+                const response = await fetch(formatInfo.endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ data: currentData })
+                    body: JSON.stringify({ data: data })
                 });
                 
                 if (!response.ok) {
@@ -640,13 +686,14 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `cpe_data_${new Date().getTime()}.csv`;
+                a.download = `cpe_data_${section}_${new Date().getTime()}.${formatInfo.ext}`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                alert('CSV 檔案已下載！');
+                const sectionName = section === 'fetch' ? '功能一' : '功能二';
+                alert(`${sectionName} 的 ${format.toUpperCase()} 檔案已下載！`);
             } catch (error) {
                 alert(`匯出錯誤：${error.message}`);
             }

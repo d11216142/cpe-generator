@@ -301,7 +301,7 @@ def generate_random_cpe():
         'vendor': '',
         'product': '',
         'version': '',
-        'other_fields': 'Parse error',
+        'other_fields': f'Failed to parse CPE: {cpe_string}',
         **metadata
     }
 

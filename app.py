@@ -20,6 +20,60 @@ COMMON_VENDORS = [
 PRODUCT_PREFIXES = ['server', 'client', 'pro', 'enterprise', 'professional', 'community', 'standard', 'ultimate']
 PRODUCT_TYPES = ['suite', 'manager', 'viewer', 'editor', 'player', 'reader', 'browser', 'office', 'database', 'framework']
 
+# CPE Dictionary - Sample CPE entries representing real-world software
+CPE_DICTIONARY = [
+    'cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*',
+    'cpe:2.3:a:microsoft:windows:11:*:*:*:*:*:*:*',
+    'cpe:2.3:a:microsoft:office:2019:*:*:*:*:*:*:*',
+    'cpe:2.3:a:microsoft:office:2021:sp1:*:*:professional:*:*:*',
+    'cpe:2.3:a:microsoft:edge:120.0.2210.91:*:*:*:*:*:*:*',
+    'cpe:2.3:a:google:chrome:120.0.6099.129:*:*:*:*:*:*:*',
+    'cpe:2.3:a:google:chrome:119.0.6045.199:stable:*:*:*:*:*:*',
+    'cpe:2.3:a:mozilla:firefox:121.0:*:*:*:*:*:*:*',
+    'cpe:2.3:a:mozilla:firefox:120.0.1:*:*:*:*:linux:*:*',
+    'cpe:2.3:a:mozilla:thunderbird:115.6.0:*:*:*:*:*:*:*',
+    'cpe:2.3:a:adobe:acrobat_reader:23.008.20458:*:*:*:*:*:*:*',
+    'cpe:2.3:a:adobe:photoshop:24.7.1:*:*:*:*:*:*:*',
+    'cpe:2.3:a:adobe:illustrator:28.0:*:*:*:*:*:*:*',
+    'cpe:2.3:a:oracle:java:1.8.0:update391:*:*:*:*:*:*',
+    'cpe:2.3:a:oracle:java:17.0.9:*:*:*:*:*:*:*',
+    'cpe:2.3:a:oracle:mysql:8.0.35:*:*:*:*:*:*:*',
+    'cpe:2.3:a:oracle:virtualbox:7.0.12:*:*:*:*:*:*:*',
+    'cpe:2.3:a:apache:tomcat:10.1.17:*:*:*:*:*:*:*',
+    'cpe:2.3:a:apache:http_server:2.4.58:*:*:*:*:*:*:*',
+    'cpe:2.3:a:apache:maven:3.9.6:*:*:*:*:*:*:*',
+    'cpe:2.3:a:python:python:3.12.1:*:*:*:*:*:*:*',
+    'cpe:2.3:a:python:python:3.11.7:*:*:*:*:*:*:*',
+    'cpe:2.3:a:nodejs:node.js:20.10.0:*:*:*:lts:*:*:*',
+    'cpe:2.3:a:nodejs:node.js:21.5.0:*:*:*:*:*:*:*',
+    'cpe:2.3:a:php:php:8.3.1:*:*:*:*:*:*:*',
+    'cpe:2.3:a:php:php:8.2.14:*:*:*:*:*:*:*',
+    'cpe:2.3:a:vmware:workstation:17.5.0:*:*:*:pro:*:*:*',
+    'cpe:2.3:a:vmware:vsphere:8.0:update2:*:*:*:*:*:*',
+    'cpe:2.3:a:cisco:webex:43.12.0.27982:*:*:*:*:*:*:*',
+    'cpe:2.3:a:cisco:anyconnect:4.10.07061:*:*:*:*:*:*:*',
+    'cpe:2.3:a:ibm:db2:11.5.8:*:*:*:*:linux:*:*',
+    'cpe:2.3:a:ibm:websphere:9.0.5.15:*:*:*:*:*:*:*',
+    'cpe:2.3:a:intel:graphics_driver:31.0.101.4972:*:*:*:*:windows:*:*',
+    'cpe:2.3:a:nvidia:geforce_experience:3.27.0.112:*:*:*:*:*:*:*',
+    'cpe:2.3:a:zoom:zoom:5.16.10.26186:*:*:*:*:windows:*:*',
+    'cpe:2.3:a:slack:slack:4.36.140:*:*:*:*:*:*:*',
+    'cpe:2.3:a:docker:docker:24.0.7:*:*:*:*:*:*:*',
+    'cpe:2.3:a:git:git:2.43.0:*:*:*:*:*:*:*',
+    'cpe:2.3:a:7-zip:7-zip:23.01:*:*:*:*:*:*:*',
+    'cpe:2.3:a:videolan:vlc:3.0.20:*:*:*:*:*:*:*',
+    'cpe:2.3:a:wireshark:wireshark:4.2.0:*:*:*:*:*:*:*',
+    'cpe:2.3:a:notepad_plus_plus:notepad\\+\\+:8.6.2:*:*:*:*:*:*:*',
+    'cpe:2.3:a:postman:postman:10.21.1:*:*:*:*:*:*:*',
+    'cpe:2.3:a:jetbrains:intellij_idea:2023.3.2:*:*:*:community:*:*:*',
+    'cpe:2.3:a:visual_studio_code:visual_studio_code:1.85.2:*:*:*:*:*:*:*',
+    'cpe:2.3:a:spotify:spotify:1.2.26.1187:*:*:*:*:*:*:*',
+    'cpe:2.3:a:steam:steam:1702689516:*:*:*:*:*:*:*',
+    'cpe:2.3:a:discord:discord:0.0.309:*:*:*:*:*:*:*',
+    'cpe:2.3:a:malwarebytes:anti-malware:4.6.3:*:*:*:premium:*:*:*',
+    'cpe:2.3:a:ccleaner:ccleaner:6.19.10858:*:*:*:free:*:*:*'
+]
+
 def parse_cpe_uri(cpe_string):
     """
     Parse CPE URI format (cpe:2.3:a:vendor:product:version:...)
@@ -180,6 +234,36 @@ def generate_random_cpe():
 def index():
     """Main page"""
     return render_template('index.html')
+
+@app.route('/api/auto-fetch-cpe', methods=['POST'])
+def auto_fetch_cpe():
+    """
+    Auto-fetch CPE entries from CPE dictionary
+    Expected input: count (number of CPE entries to fetch, default 10)
+    """
+    try:
+        data = request.json
+        count = data.get('count', 10)
+        count = min(max(1, count), 100)  # Limit between 1 and 100
+        
+        # Randomly select CPE entries from the dictionary
+        import random
+        selected_cpes = random.sample(CPE_DICTIONARY, min(count, len(CPE_DICTIONARY)))
+        
+        results = []
+        for cpe_string in selected_cpes:
+            # Validate CPE
+            if validate_cpe_with_nvd(cpe_string):
+                # Parse CPE
+                parsed = parse_cpe_uri(cpe_string)
+                if parsed:
+                    # Add installation metadata
+                    metadata = generate_installation_metadata()
+                    results.append({**parsed, **metadata})
+        
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/fetch-cpe', methods=['POST'])
 def fetch_cpe():

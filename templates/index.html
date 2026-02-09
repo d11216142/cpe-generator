@@ -284,29 +284,15 @@
                 <h2 class="section-title">功能一：CPE 編號擷取與解析</h2>
                 
                 <div class="form-group">
-                    <label for="cpe-input">輸入 CPE 編號：</label>
-                    <input type="text" id="cpe-input" 
-                           placeholder="例如: cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*"
-                           value="cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*">
+                    <label for="fetch-count">自動抓取 CPE 數量：</label>
+                    <input type="number" id="fetch-count" value="10" min="1" max="100">
                     <small style="color: #666; display: block; margin-top: 5px;">
-                        或搜尋：
+                        系統將自動從 CPE 字典中隨機抓取指定數量的 CPE 編號，並解析成供應商、產品名稱、版本號等資訊。
                     </small>
                 </div>
                 
-                <div class="row">
-                    <div class="form-group">
-                        <label for="search-vendor">供應商：</label>
-                        <input type="text" id="search-vendor" placeholder="例如: microsoft">
-                    </div>
-                    <div class="form-group">
-                        <label for="search-product">產品名稱：</label>
-                        <input type="text" id="search-product" placeholder="例如: windows">
-                    </div>
-                </div>
-                
                 <div class="button-group">
-                    <button class="btn-primary" onclick="fetchCPE()">解析 CPE</button>
-                    <button class="btn-secondary" onclick="searchCPE()">搜尋 CPE</button>
+                    <button class="btn-primary" onclick="autoFetchCPE()">自動抓取 CPE</button>
                     <button class="btn-secondary" onclick="clearResults('fetch')">清除結果</button>
                 </div>
                 
@@ -452,6 +438,41 @@
             resultsDiv.innerHTML = html;
         }
         
+        async function autoFetchCPE() {
+            const count = parseInt(document.getElementById('fetch-count').value);
+            
+            if (count < 1 || count > 100) {
+                showAlert('fetch', '數量必須在 1-100 之間', 'error');
+                return;
+            }
+            
+            clearAlert('fetch');
+            showLoading('fetch');
+            
+            try {
+                const response = await fetch('/api/auto-fetch-cpe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ count })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '處理失敗');
+                }
+                
+                displayResults('fetch', data);
+                showAlert('fetch', `成功抓取並解析 ${data.length} 筆 CPE 資料！`, 'success');
+            } catch (error) {
+                showAlert('fetch', `錯誤：${error.message}`, 'error');
+            } finally {
+                hideLoading('fetch');
+            }
+        }
+        
         async function fetchCPE() {
             const cpeInput = document.getElementById('cpe-input').value.trim();
             
@@ -480,42 +501,6 @@
                 
                 displayResults('fetch', data);
                 showAlert('fetch', 'CPE 解析成功！', 'success');
-            } catch (error) {
-                showAlert('fetch', `錯誤：${error.message}`, 'error');
-            } finally {
-                hideLoading('fetch');
-            }
-        }
-        
-        async function searchCPE() {
-            const vendor = document.getElementById('search-vendor').value.trim();
-            const product = document.getElementById('search-product').value.trim();
-            
-            if (!vendor || !product) {
-                showAlert('fetch', '請輸入供應商和產品名稱', 'error');
-                return;
-            }
-            
-            clearAlert('fetch');
-            showLoading('fetch');
-            
-            try {
-                const response = await fetch('/api/search-cpe', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ vendor, product })
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || '搜尋失敗');
-                }
-                
-                displayResults('fetch', data);
-                showAlert('fetch', `找到 ${data.length} 筆 CPE 資料`, 'success');
             } catch (error) {
                 showAlert('fetch', `錯誤：${error.message}`, 'error');
             } finally {
@@ -595,12 +580,8 @@
         }
         
         // Add enter key support for inputs
-        document.getElementById('cpe-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') fetchCPE();
-        });
-        
-        document.getElementById('search-product').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') searchCPE();
+        document.getElementById('fetch-count').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') autoFetchCPE();
         });
         
         document.getElementById('generate-count').addEventListener('keypress', function(e) {

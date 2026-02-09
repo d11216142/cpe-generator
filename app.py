@@ -291,13 +291,18 @@ def generate_random_cpe():
         metadata = generate_installation_metadata()
         return {**parsed, **metadata}
     
-    # Fallback if parsing fails (should not happen)
+    # Fallback if parsing fails (should not happen with valid CPE strings)
+    # Return minimal structure if parsing somehow fails
+    metadata = generate_installation_metadata()
     return {
-        'vendor': vendor,
-        'product': product,
-        'version': version,
         'cpe': cpe_string,
-        **generate_installation_metadata()
+        'category': 'Unknown',
+        'category_code': '',
+        'vendor': '',
+        'product': '',
+        'version': '',
+        'other_fields': 'Parse error',
+        **metadata
     }
 
 @app.route('/')

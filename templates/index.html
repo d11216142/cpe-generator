@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPE 編號產生器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '●';
+            color: #667eea;
+            margin-right: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 1.05em;
+        }
+        
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 5px solid #28a745;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 5px solid #17a2b8;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .stats {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stats-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stats-label {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 CPE 編號產生器</h1>
+            <p>Common Platform Enumeration (CPE) 編號管理與生成工具</p>
+        </div>
+        
+        <div class="content">
+            <!-- Section 1: Fetch and Parse CPE -->
+            <div class="section">
+                <h2 class="section-title">功能一：CPE 編號擷取與解析</h2>
+                
+                <div class="form-group">
+                    <label for="cpe-input">輸入 CPE 編號：</label>
+                    <input type="text" id="cpe-input" 
+                           placeholder="例如: cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*"
+                           value="cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        或搜尋：
+                    </small>
+                </div>
+                
+                <div class="row">
+                    <div class="form-group">
+                        <label for="search-vendor">供應商：</label>
+                        <input type="text" id="search-vendor" placeholder="例如: microsoft">
+                    </div>
+                    <div class="form-group">
+                        <label for="search-product">產品名稱：</label>
+                        <input type="text" id="search-product" placeholder="例如: windows">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="fetchCPE()">解析 CPE</button>
+                    <button class="btn-secondary" onclick="searchCPE()">搜尋 CPE</button>
+                    <button class="btn-secondary" onclick="clearResults('fetch')">清除結果</button>
+                </div>
+                
+                <div id="fetch-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px;">處理中...</p>
+                </div>
+                
+                <div id="fetch-alert"></div>
+                <div id="fetch-results" class="results hidden"></div>
+            </div>
+            
+            <!-- Section 2: Generate Random CPE -->
+            <div class="section">
+                <h2 class="section-title">功能二：隨機產生 CPE 編號</h2>
+                
+                <div class="form-group">
+                    <label for="generate-count">產生數量：</label>
+                    <input type="number" id="generate-count" value="5" min="1" max="50">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        系統將根據常見公司名稱隨機產生 CPE 編號，並驗證其正確性
+                    </small>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="generateRandom()">產生隨機 CPE</button>
+                    <button class="btn-secondary" onclick="clearResults('generate')">清除結果</button>
+                </div>
+                
+                <div id="generate-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px;">產生中...</p>
+                </div>
+                
+                <div id="generate-alert"></div>
+                <div id="generate-results" class="results hidden"></div>
+            </div>
+            
+            <!-- Export Section -->
+            <div class="section" style="background: #e8f5e9; border-left-color: #28a745;">
+                <h2 class="section-title">📥 匯出資料</h2>
+                <p style="margin-bottom: 15px; color: #666;">
+                    點擊下方按鈕，將當前顯示的 CPE 資料匯出為 CSV 檔案
+                </p>
+                <button class="btn-success" onclick="exportToCSV()">下載 CSV 檔案</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentData = [];
+        
+        function showLoading(section) {
+            document.getElementById(`${section}-loading`).classList.add('active');
+        }
+        
+        function hideLoading(section) {
+            document.getElementById(`${section}-loading`).classList.remove('active');
+        }
+        
+        function showAlert(section, message, type = 'error') {
+            const alertDiv = document.getElementById(`${section}-alert`);
+            alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+        }
+        
+        function clearAlert(section) {
+            document.getElementById(`${section}-alert`).innerHTML = '';
+        }
+        
+        function clearResults(section) {
+            document.getElementById(`${section}-results`).classList.add('hidden');
+            document.getElementById(`${section}-results`).innerHTML = '';
+            clearAlert(section);
+            if (section === 'fetch' || section === 'generate') {
+                currentData = [];
+            }
+        }
+        
+        function displayResults(section, data) {
+            if (!data || data.length === 0) {
+                showAlert(section, '沒有找到結果', 'info');
+                return;
+            }
+            
+            currentData = Array.isArray(data) ? data : [data];
+            
+            const resultsDiv = document.getElementById(`${section}-results`);
+            resultsDiv.classList.remove('hidden');
+            
+            let html = `
+                <div class="row" style="margin-bottom: 20px;">
+                    <div class="stats">
+                        <div class="stats-number">${currentData.length}</div>
+                        <div class="stats-label">總筆數</div>
+                    </div>
+                    <div class="stats">
+                        <div class="stats-number">${new Set(currentData.map(d => d.vendor)).size}</div>
+                        <div class="stats-label">供應商數</div>
+                    </div>
+                    <div class="stats">
+                        <div class="stats-number">${new Set(currentData.map(d => d.product)).size}</div>
+                        <div class="stats-label">產品數</div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>CPE 編號</th>
+                                <th>供應商</th>
+                                <th>產品名稱</th>
+                                <th>版本號</th>
+                                <th>其他欄位</th>
+                                <th>大小 (MB)</th>
+                                <th>安裝日期</th>
+                                <th>安裝位置</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            currentData.forEach(item => {
+                html += `
+                    <tr>
+                        <td style="font-family: monospace; font-size: 0.9em;">${item.cpe}</td>
+                        <td><strong>${item.vendor}</strong></td>
+                        <td>${item.product}</td>
+                        <td>${item.version || '-'}</td>
+                        <td style="font-size: 0.9em;">${item.other_fields || 'None'}</td>
+                        <td>${item.size_mb} MB</td>
+                        <td>${item.install_date}</td>
+                        <td style="font-family: monospace; font-size: 0.9em;">${item.install_location}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        async function fetchCPE() {
+            const cpeInput = document.getElementById('cpe-input').value.trim();
+            
+            if (!cpeInput) {
+                showAlert('fetch', '請輸入 CPE 編號', 'error');
+                return;
+            }
+            
+            clearAlert('fetch');
+            showLoading('fetch');
+            
+            try {
+                const response = await fetch('/api/fetch-cpe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cpe_string: cpeInput })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '處理失敗');
+                }
+                
+                displayResults('fetch', data);
+                showAlert('fetch', 'CPE 解析成功！', 'success');
+            } catch (error) {
+                showAlert('fetch', `錯誤：${error.message}`, 'error');
+            } finally {
+                hideLoading('fetch');
+            }
+        }
+        
+        async function searchCPE() {
+            const vendor = document.getElementById('search-vendor').value.trim();
+            const product = document.getElementById('search-product').value.trim();
+            
+            if (!vendor || !product) {
+                showAlert('fetch', '請輸入供應商和產品名稱', 'error');
+                return;
+            }
+            
+            clearAlert('fetch');
+            showLoading('fetch');
+            
+            try {
+                const response = await fetch('/api/search-cpe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ vendor, product })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '搜尋失敗');
+                }
+                
+                displayResults('fetch', data);
+                showAlert('fetch', `找到 ${data.length} 筆 CPE 資料`, 'success');
+            } catch (error) {
+                showAlert('fetch', `錯誤：${error.message}`, 'error');
+            } finally {
+                hideLoading('fetch');
+            }
+        }
+        
+        async function generateRandom() {
+            const count = parseInt(document.getElementById('generate-count').value);
+            
+            if (count < 1 || count > 50) {
+                showAlert('generate', '數量必須在 1-50 之間', 'error');
+                return;
+            }
+            
+            clearAlert('generate');
+            showLoading('generate');
+            
+            try {
+                const response = await fetch('/api/generate-random', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ count })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || '產生失敗');
+                }
+                
+                displayResults('generate', data);
+                showAlert('generate', `成功產生 ${data.length} 筆隨機 CPE 資料！`, 'success');
+            } catch (error) {
+                showAlert('generate', `錯誤：${error.message}`, 'error');
+            } finally {
+                hideLoading('generate');
+            }
+        }
+        
+        async function exportToCSV() {
+            if (currentData.length === 0) {
+                alert('沒有資料可以匯出。請先解析或產生 CPE 資料。');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/export-csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ data: currentData })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('匯出失敗');
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cpe_data_${new Date().getTime()}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                alert('CSV 檔案已下載！');
+            } catch (error) {
+                alert(`匯出錯誤：${error.message}`);
+            }
+        }
+        
+        // Add enter key support for inputs
+        document.getElementById('cpe-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') fetchCPE();
+        });
+        
+        document.getElementById('search-product').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchCPE();
+        });
+        
+        document.getElementById('generate-count').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') generateRandom();
+        });
+    </script>
+</body>
+</html>

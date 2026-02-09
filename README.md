@@ -45,6 +45,14 @@ python app.py
 
 應用程式將在 `http://localhost:5000` 啟動
 
+**注意**: 預設情況下，應用程式在生產模式下運行（debug=False）。如果需要開發模式，請設定環境變數：
+```bash
+export FLASK_DEBUG=true
+python app.py
+```
+
+⚠️ **安全提醒**: 切勿在生產環境中啟用 debug 模式，這可能會讓攻擊者透過除錯器執行任意程式碼。
+
 ### 使用介面
 
 1. **解析 CPE 編號**

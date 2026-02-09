@@ -473,41 +473,6 @@
             }
         }
         
-        async function fetchCPE() {
-            const cpeInput = document.getElementById('cpe-input').value.trim();
-            
-            if (!cpeInput) {
-                showAlert('fetch', '請輸入 CPE 編號', 'error');
-                return;
-            }
-            
-            clearAlert('fetch');
-            showLoading('fetch');
-            
-            try {
-                const response = await fetch('/api/fetch-cpe', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ cpe_string: cpeInput })
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || '處理失敗');
-                }
-                
-                displayResults('fetch', data);
-                showAlert('fetch', 'CPE 解析成功！', 'success');
-            } catch (error) {
-                showAlert('fetch', `錯誤：${error.message}`, 'error');
-            } finally {
-                hideLoading('fetch');
-            }
-        }
-        
         async function generateRandom() {
             const count = parseInt(document.getElementById('generate-count').value);
             

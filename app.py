@@ -247,7 +247,6 @@ def auto_fetch_cpe():
         count = min(max(1, count), 100)  # Limit between 1 and 100
         
         # Randomly select CPE entries from the dictionary
-        import random
         selected_cpes = random.sample(CPE_DICTIONARY, min(count, len(CPE_DICTIONARY)))
         
         results = []

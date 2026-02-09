@@ -284,6 +284,14 @@ def generate_random_cpe():
         # Sometimes use a similar existing CPE
         cpe_string = random.choice(similar_cpes)
     
+    # Parse the CPE to get full structure
+    parsed = parse_cpe_uri(cpe_string)
+    if parsed:
+        # Add installation metadata to the parsed structure
+        metadata = generate_installation_metadata()
+        return {**parsed, **metadata}
+    
+    # Fallback if parsing fails (should not happen)
     return {
         'vendor': vendor,
         'product': product,

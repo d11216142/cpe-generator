@@ -303,6 +303,13 @@
                 
                 <div id="fetch-alert"></div>
                 <div id="fetch-results" class="results hidden"></div>
+                
+                <!-- Export buttons for Function 1 -->
+                <div id="fetch-export" class="button-group hidden" style="margin-top: 20px;">
+                    <button class="btn-success" onclick="exportData('fetch', 'csv')">📥 下載 CSV</button>
+                    <button class="btn-success" onclick="exportData('fetch', 'xlsx')">📥 下載 XLSX</button>
+                    <button class="btn-success" onclick="exportData('fetch', 'json')">📥 下載 JSON</button>
+                </div>
             </div>
             
             <!-- Section 2: Generate Random CPE -->
@@ -329,15 +336,26 @@
                 
                 <div id="generate-alert"></div>
                 <div id="generate-results" class="results hidden"></div>
+                
+                <!-- Export buttons for Function 2 -->
+                <div id="generate-export" class="button-group hidden" style="margin-top: 20px;">
+                    <button class="btn-success" onclick="exportData('generate', 'csv')">📥 下載 CSV</button>
+                    <button class="btn-success" onclick="exportData('generate', 'xlsx')">📥 下載 XLSX</button>
+                    <button class="btn-success" onclick="exportData('generate', 'json')">📥 下載 JSON</button>
+                </div>
             </div>
             
-            <!-- Export Section -->
+            <!-- Export Section - Combined Data -->
             <div class="section" style="background: #e8f5e9; border-left-color: #28a745;">
-                <h2 class="section-title">📥 匯出資料</h2>
+                <h2 class="section-title">📥 匯出所有資料</h2>
                 <p style="margin-bottom: 15px; color: #666;">
-                    點擊下方按鈕，將當前顯示的 CPE 資料匯出為 CSV 檔案
+                    點擊下方按鈕，將功能一和功能二的所有 CPE 資料合併匯出
                 </p>
-                <button class="btn-success" onclick="exportToCSV()">下載 CSV 檔案</button>
+                <div class="button-group">
+                    <button class="btn-success" onclick="exportAllData('csv')">下載 CSV 檔案</button>
+                    <button class="btn-success" onclick="exportAllData('xlsx')">下載 XLSX 檔案</button>
+                    <button class="btn-success" onclick="exportAllData('json')">下載 JSON 檔案</button>
+                </div>
             </div>
         </div>
     </div>
@@ -371,6 +389,7 @@
         function clearResults(section) {
             document.getElementById(`${section}-results`).classList.add('hidden');
             document.getElementById(`${section}-results`).innerHTML = '';
+            document.getElementById(`${section}-export`).classList.add('hidden');
             clearAlert(section);
             if (section === 'fetch') {
                 fetchData = [];
@@ -560,6 +579,9 @@
             
             currentPage[section] = 1;
             displayCurrentPage(section);
+            
+            // Show export buttons for this section
+            document.getElementById(`${section}-export`).classList.remove('hidden');
         }
         
         async function autoFetchCPE() {
@@ -632,7 +654,48 @@
             }
         }
         
-        async function exportToCSV() {
+        async function exportData(section, format) {
+            const data = section === 'fetch' ? fetchData : generateData;
+            
+            if (data.length === 0) {
+                alert('沒有資料可以匯出。請先產生資料。');
+                return;
+            }
+            
+            const endpoint = `/api/export-${format}`;
+            const fileExtension = format;
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ data: data })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('匯出失敗');
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cpe_${section}_${new Date().getTime()}.${fileExtension}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                alert(`${format.toUpperCase()} 檔案已下載！`);
+            } catch (error) {
+                alert(`匯出錯誤：${error.message}`);
+            }
+        }
+        
+        async function exportAllData(format) {
             // Combine data from both sections
             const allData = [...fetchData, ...generateData];
             
@@ -641,8 +704,11 @@
                 return;
             }
             
+            const endpoint = `/api/export-${format}`;
+            const fileExtension = format;
+            
             try {
-                const response = await fetch('/api/export-csv', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -659,13 +725,13 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `cpe_data_${new Date().getTime()}.csv`;
+                a.download = `cpe_all_data_${new Date().getTime()}.${fileExtension}`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                alert('CSV 檔案已下載！');
+                alert(`${format.toUpperCase()} 檔案已下載！`);
             } catch (error) {
                 alert(`匯出錯誤：${error.message}`);
             }

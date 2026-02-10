@@ -287,12 +287,25 @@ def generate_random_cpe():
         # Sometimes use a similar existing CPE
         cpe_string = random.choice(similar_cpes)
     
+    # Parse the CPE to get full structure
+    parsed = parse_cpe_uri(cpe_string)
+    if parsed:
+        # Add installation metadata to the parsed structure
+        metadata = generate_installation_metadata()
+        return {**parsed, **metadata}
+    
+    # Fallback if parsing fails (should not happen with valid CPE strings)
+    # Return minimal structure if parsing somehow fails
+    metadata = generate_installation_metadata()
     return {
-        'vendor': vendor,
-        'product': product,
-        'version': version,
         'cpe': cpe_string,
-        **generate_installation_metadata()
+        'category': 'Unknown',
+        'category_code': '',
+        'vendor': '',
+        'product': '',
+        'version': '',
+        'other_fields': f'Failed to parse CPE: {cpe_string}',
+        **metadata
     }
 
 @app.route('/')

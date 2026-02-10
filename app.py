@@ -430,7 +430,14 @@ def generate_random():
         results = []
         for _ in range(count):
             cpe_data = generate_random_cpe()
-            results.append(cpe_data)
+            # Parse the generated CPE to get all fields including category
+            parsed = parse_cpe_uri(cpe_data['cpe'])
+            if parsed:
+                # Merge parsed data with generated metadata
+                results.append({**parsed, **generate_installation_metadata()})
+            else:
+                # Fallback to original data if parsing fails
+                results.append(cpe_data)
         
         return jsonify(results)
     except Exception as e:

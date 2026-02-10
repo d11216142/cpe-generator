@@ -303,6 +303,13 @@
                 
                 <div id="fetch-alert"></div>
                 <div id="fetch-results" class="results hidden"></div>
+                
+                <!-- Export buttons for Function 1 -->
+                <div id="fetch-export" class="button-group hidden" style="margin-top: 20px;">
+                    <button class="btn-success" onclick="exportData('fetch', 'csv')">📥 下載 CSV</button>
+                    <button class="btn-success" onclick="exportData('fetch', 'xlsx')">📥 下載 XLSX</button>
+                    <button class="btn-success" onclick="exportData('fetch', 'json')">📥 下載 JSON</button>
+                </div>
             </div>
             
             <!-- Section 2: Generate Random CPE -->
@@ -329,25 +336,38 @@
                 
                 <div id="generate-alert"></div>
                 <div id="generate-results" class="results hidden"></div>
+                
+                <!-- Export buttons for Function 2 -->
+                <div id="generate-export" class="button-group hidden" style="margin-top: 20px;">
+                    <button class="btn-success" onclick="exportData('generate', 'csv')">📥 下載 CSV</button>
+                    <button class="btn-success" onclick="exportData('generate', 'xlsx')">📥 下載 XLSX</button>
+                    <button class="btn-success" onclick="exportData('generate', 'json')">📥 下載 JSON</button>
+                </div>
             </div>
             
-            <!-- Export Section -->
+            <!-- Export Section - Combined Data -->
             <div class="section" style="background: #e8f5e9; border-left-color: #28a745;">
-                <h2 class="section-title">📥 匯出資料</h2>
+                <h2 class="section-title">📥 匯出所有資料</h2>
                 <p style="margin-bottom: 15px; color: #666;">
-                    點擊下方按鈕，將當前顯示的 CPE 資料匯出為 CSV 檔案
+                    點擊下方按鈕，將功能一和功能二的所有 CPE 資料合併匯出
                 </p>
-                <button class="btn-success" onclick="exportToCSV()">下載 CSV 檔案</button>
+                <div class="button-group">
+                    <button class="btn-success" onclick="exportAllData('csv')">下載 CSV 檔案</button>
+                    <button class="btn-success" onclick="exportAllData('xlsx')">下載 XLSX 檔案</button>
+                    <button class="btn-success" onclick="exportAllData('json')">下載 JSON 檔案</button>
+                </div>
             </div>
         </div>
     </div>
     
     <script>
-        let currentData = [];
-        let currentPage = 1;
+        // Separate data arrays for each function
+        let fetchData = [];
+        let generateData = [];
+        let currentPage = {fetch: 1, generate: 1};
         let itemsPerPage = 10;
-        let sortColumn = 'category_code';  // Default sort by category
-        let sortDirection = 'asc';
+        let sortColumn = {fetch: 'category_code', generate: 'category_code'};
+        let sortDirection = {fetch: 'asc', generate: 'asc'};
         
         function showLoading(section) {
             document.getElementById(`${section}-loading`).classList.add('active');
@@ -369,21 +389,27 @@
         function clearResults(section) {
             document.getElementById(`${section}-results`).classList.add('hidden');
             document.getElementById(`${section}-results`).innerHTML = '';
+            document.getElementById(`${section}-export`).classList.add('hidden');
             clearAlert(section);
-            if (section === 'fetch' || section === 'generate') {
-                currentData = [];
-                currentPage = 1;
+            if (section === 'fetch') {
+                fetchData = [];
+                currentPage.fetch = 1;
+            } else if (section === 'generate') {
+                generateData = [];
+                currentPage.generate = 1;
             }
         }
         
-        function sortData(column) {
-            if (sortColumn === column) {
+        function sortData(column, section) {
+            const currentData = section === 'fetch' ? fetchData : generateData;
+            
+            if (sortColumn[section] === column) {
                 // Toggle direction if same column
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                sortDirection[section] = sortDirection[section] === 'asc' ? 'desc' : 'asc';
             } else {
                 // New column, default to ascending
-                sortColumn = column;
-                sortDirection = 'asc';
+                sortColumn[section] = column;
+                sortDirection[section] = 'asc';
             }
             
             currentData.sort((a, b) => {
@@ -394,17 +420,17 @@
                 aVal = String(aVal).toLowerCase();
                 bVal = String(bVal).toLowerCase();
                 
-                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                if (aVal < bVal) return sortDirection[section] === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection[section] === 'asc' ? 1 : -1;
                 return 0;
             });
             
-            currentPage = 1;  // Reset to first page when sorting
-            displayCurrentPage();
+            currentPage[section] = 1;  // Reset to first page when sorting
+            displayCurrentPage(section);
         }
         
-        function displayCurrentPage() {
-            const section = currentData.length > 0 ? 'fetch' : 'generate';
+        function displayCurrentPage(section) {
+            const currentData = section === 'fetch' ? fetchData : generateData;
             const resultsDiv = document.getElementById(`${section}-results`);
             
             if (!currentData || currentData.length === 0) {
@@ -416,7 +442,7 @@
             
             // Calculate pagination
             const totalPages = Math.ceil(currentData.length / itemsPerPage);
-            const startIdx = (currentPage - 1) * itemsPerPage;
+            const startIdx = (currentPage[section] - 1) * itemsPerPage;
             const endIdx = Math.min(startIdx + itemsPerPage, currentData.length);
             const pageData = currentData.slice(startIdx, endIdx);
             
@@ -439,32 +465,32 @@
                     <table>
                         <thead>
                             <tr>
-                                <th onclick="sortData('category_code')" style="cursor: pointer;">
-                                    類別 ${sortColumn === 'category_code' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('category_code', '${section}')" style="cursor: pointer;">
+                                    類別 ${sortColumn[section] === 'category_code' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('cpe')" style="cursor: pointer;">
-                                    CPE 編號 ${sortColumn === 'cpe' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('cpe', '${section}')" style="cursor: pointer;">
+                                    CPE 編號 ${sortColumn[section] === 'cpe' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('vendor')" style="cursor: pointer;">
-                                    供應商 ${sortColumn === 'vendor' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('vendor', '${section}')" style="cursor: pointer;">
+                                    供應商 ${sortColumn[section] === 'vendor' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('product')" style="cursor: pointer;">
-                                    產品名稱 ${sortColumn === 'product' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('product', '${section}')" style="cursor: pointer;">
+                                    產品名稱 ${sortColumn[section] === 'product' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('version')" style="cursor: pointer;">
-                                    版本號 ${sortColumn === 'version' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('version', '${section}')" style="cursor: pointer;">
+                                    版本號 ${sortColumn[section] === 'version' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('other_fields')" style="cursor: pointer;">
-                                    其他欄位 ${sortColumn === 'other_fields' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('other_fields', '${section}')" style="cursor: pointer;">
+                                    其他欄位 ${sortColumn[section] === 'other_fields' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('size_mb')" style="cursor: pointer;">
-                                    大小 (MB) ${sortColumn === 'size_mb' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('size_mb', '${section}')" style="cursor: pointer;">
+                                    大小 (MB) ${sortColumn[section] === 'size_mb' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('install_date')" style="cursor: pointer;">
-                                    安裝日期 ${sortColumn === 'install_date' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('install_date', '${section}')" style="cursor: pointer;">
+                                    安裝日期 ${sortColumn[section] === 'install_date' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
-                                <th onclick="sortData('install_location')" style="cursor: pointer;">
-                                    安裝位置 ${sortColumn === 'install_location' ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
+                                <th onclick="sortData('install_location', '${section}')" style="cursor: pointer;">
+                                    安裝位置 ${sortColumn[section] === 'install_location' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
                             </tr>
                         </thead>
@@ -498,15 +524,15 @@
                 html += `
                     <div style="margin-top: 20px; text-align: center;">
                         <div style="display: inline-flex; gap: 10px; align-items: center;">
-                            <button class="btn-secondary" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} 
-                                    style="${currentPage === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+                            <button class="btn-secondary" onclick="changePage(${currentPage[section] - 1}, '${section}')" ${currentPage[section] === 1 ? 'disabled' : ''} 
+                                    style="${currentPage[section] === 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
                                 上一頁
                             </button>
                             <span style="font-weight: bold; padding: 0 15px;">
-                                第 ${currentPage} 頁 / 共 ${totalPages} 頁 (顯示 ${startIdx + 1}-${endIdx} 筆，共 ${currentData.length} 筆)
+                                第 ${currentPage[section]} 頁 / 共 ${totalPages} 頁 (顯示 ${startIdx + 1}-${endIdx} 筆，共 ${currentData.length} 筆)
                             </span>
-                            <button class="btn-secondary" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}
-                                    style="${currentPage === totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
+                            <button class="btn-secondary" onclick="changePage(${currentPage[section] + 1}, '${section}')" ${currentPage[section] === totalPages ? 'disabled' : ''}
+                                    style="${currentPage[section] === totalPages ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
                                 下一頁
                             </button>
                         </div>
@@ -517,11 +543,12 @@
             resultsDiv.innerHTML = html;
         }
         
-        function changePage(newPage) {
+        function changePage(newPage, section) {
+            const currentData = section === 'fetch' ? fetchData : generateData;
             const totalPages = Math.ceil(currentData.length / itemsPerPage);
             if (newPage >= 1 && newPage <= totalPages) {
-                currentPage = newPage;
-                displayCurrentPage();
+                currentPage[section] = newPage;
+                displayCurrentPage(section);
             }
         }
         
@@ -531,19 +558,30 @@
                 return;
             }
             
-            currentData = Array.isArray(data) ? data : [data];
+            const dataArray = Array.isArray(data) ? data : [data];
+            
+            // Store data in the appropriate array
+            if (section === 'fetch') {
+                fetchData = dataArray;
+            } else if (section === 'generate') {
+                generateData = dataArray;
+            }
             
             // Apply default sort by category
-            sortColumn = 'category_code';
-            sortDirection = 'asc';
+            sortColumn[section] = 'category_code';
+            sortDirection[section] = 'asc';
+            const currentData = section === 'fetch' ? fetchData : generateData;
             currentData.sort((a, b) => {
-                const aVal = a[sortColumn] || '';
-                const bVal = b[sortColumn] || '';
+                const aVal = a[sortColumn[section]] || '';
+                const bVal = b[sortColumn[section]] || '';
                 return aVal < bVal ? -1 : (aVal > bVal ? 1 : 0);
             });
             
-            currentPage = 1;
-            displayCurrentPage();
+            currentPage[section] = 1;
+            displayCurrentPage(section);
+            
+            // Show export buttons for this section
+            document.getElementById(`${section}-export`).classList.remove('hidden');
         }
         
         async function autoFetchCPE() {
@@ -616,19 +654,24 @@
             }
         }
         
-        async function exportToCSV() {
-            if (currentData.length === 0) {
-                alert('沒有資料可以匯出。請先解析或產生 CPE 資料。');
+        async function exportData(section, format) {
+            const data = section === 'fetch' ? fetchData : generateData;
+            
+            if (data.length === 0) {
+                alert('沒有資料可以匯出。請先產生資料。');
                 return;
             }
             
+            const endpoint = `/api/export-${format}`;
+            const fileExtension = format;
+            
             try {
-                const response = await fetch('/api/export-csv', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ data: currentData })
+                    body: JSON.stringify({ data: data })
                 });
                 
                 if (!response.ok) {
@@ -640,13 +683,55 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `cpe_data_${new Date().getTime()}.csv`;
+                a.download = `cpe_${section}_${new Date().getTime()}.${fileExtension}`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                alert('CSV 檔案已下載！');
+                alert(`${format.toUpperCase()} 檔案已下載！`);
+            } catch (error) {
+                alert(`匯出錯誤：${error.message}`);
+            }
+        }
+        
+        async function exportAllData(format) {
+            // Combine data from both sections
+            const allData = [...fetchData, ...generateData];
+            
+            if (allData.length === 0) {
+                alert('沒有資料可以匯出。請先解析或產生 CPE 資料。');
+                return;
+            }
+            
+            const endpoint = `/api/export-${format}`;
+            const fileExtension = format;
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ data: allData })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('匯出失敗');
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cpe_all_data_${new Date().getTime()}.${fileExtension}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                alert(`${format.toUpperCase()} 檔案已下載！`);
             } catch (error) {
                 alert(`匯出錯誤：${error.message}`);
             }

@@ -22,15 +22,15 @@ DEFAULT_DB_CONFIG = {
     'trusted_connection': True  # 如果使用 Windows 驗證，設為 True
 }
 
-# 允許的本地主機名稱
+# 允許的本地主機名稱（比對時不區分大小寫）
 ALLOWED_LOCALHOST_NAMES = [
     'localhost',
     '127.0.0.1',
     '::1',
     '(local)',
     '.',
-    'localhost\\sqlexpress',
-    '(localdb)\\mssqllocaldb'
+    'localhost\\SQLEXPRESS',  # SQL Server Express 具名執行個體
+    '(localdb)\\mssqllocaldb'  # LocalDB 執行個體
 ]
 
 # 資料庫連線設定常數
@@ -305,6 +305,7 @@ def save_cpe_to_database(cpe_data):
     try:
         cursor = conn.cursor()
         
+        # 使用常數作為資料表名稱，這是安全的（非使用者輸入）
         insert_query = f"""
         INSERT INTO {CPE_RECORDS_TABLE} 
         (vendor, product_name, version, other_fields, size_mb, install_date, install_path)
@@ -329,7 +330,7 @@ def save_cpe_to_database(cpe_data):
         error_msg = f"❌ 儲存到資料庫失敗\n\n錯誤訊息: {str(e)}\n\n"
         
         # 檢查是否為資料表不存在的錯誤
-        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE in str(e).lower():
+        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE.lower() in str(e).lower():
             error_msg += "💡 建議:\n"
             error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 不存在\n"
             error_msg += "   • 請使用以下 SQL 指令建立資料表：\n\n"
@@ -381,6 +382,7 @@ def save_multiple_cpe_to_database(cpe_list):
     try:
         cursor = conn.cursor()
         
+        # 使用常數作為資料表名稱，這是安全的（非使用者輸入）
         insert_query = f"""
         INSERT INTO {CPE_RECORDS_TABLE} 
         (vendor, product_name, version, other_fields, size_mb, install_date, install_path)
@@ -418,7 +420,7 @@ def save_multiple_cpe_to_database(cpe_list):
         error_msg = f"❌ 批次儲存失敗\n\n錯誤訊息: {str(e)}\n\n"
         
         # 檢查是否為資料表不存在的錯誤
-        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE in str(e).lower():
+        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE.lower() in str(e).lower():
             error_msg += "💡 建議:\n"
             error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 不存在\n"
             error_msg += "   • 請使用以下 SQL 指令建立資料表：\n\n"

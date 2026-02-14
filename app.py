@@ -597,6 +597,121 @@ def export_json():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/validate-cpe', methods=['POST'])
+def validate_cpe():
+    """
+    Validate a manually entered CPE string
+    """
+    try:
+        data = request.json
+        cpe_string = data.get('cpe_string', '').strip()
+        
+        if not cpe_string:
+            return jsonify({'error': 'CPE string is required'}), 400
+        
+        # Validate CPE format
+        if not validate_cpe_with_nvd(cpe_string):
+            return jsonify({'error': 'Invalid CPE format'}), 400
+        
+        # Parse CPE
+        parsed = parse_cpe_uri(cpe_string)
+        if not parsed:
+            return jsonify({'error': 'Failed to parse CPE'}), 400
+        
+        # Add installation metadata
+        metadata = generate_installation_metadata()
+        result = {**parsed, **metadata}
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/query-cve', methods=['POST'])
+def query_cve():
+    """
+    Query CVE vulnerabilities for a CPE string using NVD API
+    """
+    try:
+        data = request.json
+        cpe_string = data.get('cpe_string', '').strip()
+        
+        if not cpe_string:
+            return jsonify({'error': 'CPE string is required'}), 400
+        
+        # Query NVD for CVEs related to this CPE
+        # Note: In production, use the official NVD API with proper rate limiting
+        # https://nvd.nist.gov/developers/vulnerabilities
+        
+        try:
+            # Encode the CPE string for URL
+            encoded_cpe = quote(cpe_string)
+            nvd_api_url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cpeName={encoded_cpe}"
+            
+            # Add a timeout to prevent hanging
+            response = requests.get(nvd_api_url, timeout=10)
+            
+            if response.status_code == 200:
+                nvd_data = response.json()
+                
+                # Extract CVE information
+                vulnerabilities = nvd_data.get('vulnerabilities', [])
+                cve_list = []
+                
+                for vuln in vulnerabilities[:10]:  # Limit to 10 CVEs
+                    cve_item = vuln.get('cve', {})
+                    cve_id = cve_item.get('id', '')
+                    descriptions = cve_item.get('descriptions', [])
+                    description = descriptions[0].get('value', '') if descriptions else ''
+                    
+                    # Get severity information if available
+                    metrics = cve_item.get('metrics', {})
+                    cvss_v3 = metrics.get('cvssMetricV31', [])
+                    severity = 'Unknown'
+                    score = 'N/A'
+                    
+                    if cvss_v3:
+                        cvss_data = cvss_v3[0].get('cvssData', {})
+                        severity = cvss_data.get('baseSeverity', 'Unknown')
+                        score = cvss_data.get('baseScore', 'N/A')
+                    
+                    cve_list.append({
+                        'id': cve_id,
+                        'description': description[:200] + '...' if len(description) > 200 else description,
+                        'severity': severity,
+                        'score': score
+                    })
+                
+                result = {
+                    'cve_count': len(vulnerabilities),
+                    'cves': cve_list,
+                    'summary': f'Found {len(vulnerabilities)} CVE(s) for this CPE'
+                }
+                
+                return jsonify(result)
+            else:
+                # NVD API failed, return empty result
+                return jsonify({
+                    'cve_count': 0,
+                    'cves': [],
+                    'summary': 'No CVE data available'
+                })
+        
+        except requests.exceptions.Timeout:
+            return jsonify({
+                'cve_count': 0,
+                'cves': [],
+                'summary': 'CVE query timed out'
+            })
+        except requests.exceptions.RequestException as e:
+            return jsonify({
+                'cve_count': 0,
+                'cves': [],
+                'summary': f'CVE query failed: {str(e)}'
+            })
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Note: For production deployment, set debug=False and use a production WSGI server
     import os

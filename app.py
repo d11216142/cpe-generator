@@ -630,6 +630,8 @@ def validate_cpe():
 def query_cve():
     """
     Query CVE vulnerabilities for a CPE string using NVD API
+    Note: NVD API has rate limits (5 requests per 30 seconds without API key)
+    Consider implementing rate limiting for production use
     """
     try:
         data = request.json
@@ -657,7 +659,9 @@ def query_cve():
                 vulnerabilities = nvd_data.get('vulnerabilities', [])
                 cve_list = []
                 
-                for vuln in vulnerabilities[:10]:  # Limit to 10 CVEs
+                # Limit to 10 CVEs to keep response size manageable
+                # In production, consider pagination or configurable limit
+                for vuln in vulnerabilities[:10]:
                     cve_item = vuln.get('cve', {})
                     cve_id = cve_item.get('id', '')
                     descriptions = cve_item.get('descriptions', [])
@@ -684,29 +688,33 @@ def query_cve():
                 result = {
                     'cve_count': len(vulnerabilities),
                     'cves': cve_list,
-                    'summary': f'Found {len(vulnerabilities)} CVE(s) for this CPE'
+                    'summary': f'Found {len(vulnerabilities)} CVE(s) for this CPE',
+                    'query_successful': True
                 }
                 
                 return jsonify(result)
             else:
-                # NVD API failed, return empty result
+                # NVD API returned an error
                 return jsonify({
                     'cve_count': 0,
                     'cves': [],
-                    'summary': 'No CVE data available'
+                    'summary': f'NVD API error: HTTP {response.status_code}',
+                    'query_successful': False
                 })
         
         except requests.exceptions.Timeout:
             return jsonify({
                 'cve_count': 0,
                 'cves': [],
-                'summary': 'CVE query timed out'
+                'summary': 'CVE query timed out',
+                'query_successful': False
             })
         except requests.exceptions.RequestException as e:
             return jsonify({
                 'cve_count': 0,
                 'cves': [],
-                'summary': f'CVE query failed: {str(e)}'
+                'summary': f'CVE query failed: Network error',
+                'query_successful': False
             })
             
     except Exception as e:

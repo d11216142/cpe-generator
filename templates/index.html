@@ -804,16 +804,20 @@
                 if (!cveResponse.ok) {
                     // CVE query failed, but CPE is valid, so just show the CPE data
                     displayResults('manual', [validateData]);
-                    showAlert('manual', 'CPE 驗證成功！CVE 查詢失敗或無相關漏洞。', 'info');
+                    showAlert('manual', 'CPE 驗證成功！但無法查詢 CVE 資料。', 'info');
                 } else {
                     // Add CVE information to the validated CPE data
                     validateData.cve_count = cveData.cve_count || 0;
                     validateData.cves = cveData.cves || [];
                     validateData.cve_summary = cveData.summary || '';
+                    validateData.query_successful = cveData.query_successful !== false;
                     
                     displayResults('manual', [validateData]);
                     
-                    if (cveData.cve_count > 0) {
+                    if (cveData.query_successful === false) {
+                        // Query failed but got a response
+                        showAlert('manual', `CPE 驗證成功！CVE 查詢失敗：${cveData.summary}`, 'info');
+                    } else if (cveData.cve_count > 0) {
                         showAlert('manual', `CPE 驗證成功！找到 ${cveData.cve_count} 個相關的 CVE 漏洞。`, 'info');
                     } else {
                         showAlert('manual', 'CPE 驗證成功！未找到相關的 CVE 漏洞。', 'success');

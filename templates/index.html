@@ -345,6 +345,39 @@
                 </div>
             </div>
             
+            <!-- Section 3: Manual CPE Input and Validation -->
+            <div class="section">
+                <h2 class="section-title">功能三：手動輸入 CPE 並查詢漏洞</h2>
+                
+                <div class="form-group">
+                    <label for="manual-cpe">輸入 CPE 編號：</label>
+                    <input type="text" id="manual-cpe" placeholder="例如: cpe:2.3:a:microsoft:windows:10:*:*:*:*:*:*:*">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        輸入完整的 CPE 2.3 格式編號，系統將驗證並查詢相關的 CVE 漏洞資訊
+                    </small>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="validateAndQueryCPE()">驗證並查詢漏洞</button>
+                    <button class="btn-secondary" onclick="clearResults('manual')">清除結果</button>
+                </div>
+                
+                <div id="manual-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px;">查詢中...</p>
+                </div>
+                
+                <div id="manual-alert"></div>
+                <div id="manual-results" class="results hidden"></div>
+                
+                <!-- Export buttons for Function 3 -->
+                <div id="manual-export" class="button-group hidden" style="margin-top: 20px;">
+                    <button class="btn-success" onclick="exportData('manual', 'csv')">📥 下載 CSV</button>
+                    <button class="btn-success" onclick="exportData('manual', 'xlsx')">📥 下載 XLSX</button>
+                    <button class="btn-success" onclick="exportData('manual', 'json')">📥 下載 JSON</button>
+                </div>
+            </div>
+            
             <!-- Export Section - Combined Data -->
             <div class="section" style="background: #e8f5e9; border-left-color: #28a745;">
                 <h2 class="section-title">📥 匯出所有資料</h2>
@@ -364,10 +397,11 @@
         // Separate data arrays for each function
         let fetchData = [];
         let generateData = [];
-        let currentPage = {fetch: 1, generate: 1};
+        let manualData = [];
+        let currentPage = {fetch: 1, generate: 1, manual: 1};
         let itemsPerPage = 10;
-        let sortColumn = {fetch: 'category_code', generate: 'category_code'};
-        let sortDirection = {fetch: 'asc', generate: 'asc'};
+        let sortColumn = {fetch: 'category_code', generate: 'category_code', manual: 'category_code'};
+        let sortDirection = {fetch: 'asc', generate: 'asc', manual: 'asc'};
         
         function showLoading(section) {
             document.getElementById(`${section}-loading`).classList.add('active');
@@ -397,11 +431,14 @@
             } else if (section === 'generate') {
                 generateData = [];
                 currentPage.generate = 1;
+            } else if (section === 'manual') {
+                manualData = [];
+                currentPage.manual = 1;
             }
         }
         
         function sortData(column, section) {
-            const currentData = section === 'fetch' ? fetchData : generateData;
+            const currentData = section === 'fetch' ? fetchData : (section === 'generate' ? generateData : manualData);
             
             if (sortColumn[section] === column) {
                 // Toggle direction if same column
@@ -430,7 +467,7 @@
         }
         
         function displayCurrentPage(section) {
-            const currentData = section === 'fetch' ? fetchData : generateData;
+            const currentData = section === 'fetch' ? fetchData : (section === 'generate' ? generateData : manualData);
             const resultsDiv = document.getElementById(`${section}-results`);
             
             if (!currentData || currentData.length === 0) {
@@ -483,6 +520,7 @@
                                 <th onclick="sortData('other_fields', '${section}')" style="cursor: pointer;">
                                     其他欄位 ${sortColumn[section] === 'other_fields' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
+                                ${section === 'manual' ? '<th>CVE 漏洞</th>' : ''}
                                 <th onclick="sortData('size_mb', '${section}')" style="cursor: pointer;">
                                     大小 (MB) ${sortColumn[section] === 'size_mb' ? (sortDirection[section] === 'asc' ? '▲' : '▼') : ''}
                                 </th>
@@ -498,6 +536,27 @@
             `;
             
             pageData.forEach(item => {
+                // Format CVE information if available
+                let cveCell = '';
+                if (section === 'manual' && item.cve_count !== undefined) {
+                    if (item.cve_count > 0) {
+                        let cveDetails = `<strong style="color: #dc3545;">${item.cve_count} CVE(s)</strong><br>`;
+                        if (item.cves && item.cves.length > 0) {
+                            cveDetails += '<small>';
+                            item.cves.slice(0, 3).forEach(cve => {
+                                cveDetails += `${cve.id} (${cve.severity})<br>`;
+                            });
+                            if (item.cves.length > 3) {
+                                cveDetails += `...and ${item.cves.length - 3} more`;
+                            }
+                            cveDetails += '</small>';
+                        }
+                        cveCell = `<td style="font-size: 0.85em;">${cveDetails}</td>`;
+                    } else {
+                        cveCell = '<td style="color: #28a745;"><strong>✓ No CVEs</strong></td>';
+                    }
+                }
+                
                 html += `
                     <tr>
                         <td><strong>${item.category}</strong></td>
@@ -506,6 +565,7 @@
                         <td>${item.product}</td>
                         <td>${item.version || '-'}</td>
                         <td style="font-size: 0.9em;">${item.other_fields || 'None'}</td>
+                        ${cveCell}
                         <td>${item.size_mb} MB</td>
                         <td>${item.install_date}</td>
                         <td style="font-family: monospace; font-size: 0.9em;">${item.install_location}</td>
@@ -544,7 +604,7 @@
         }
         
         function changePage(newPage, section) {
-            const currentData = section === 'fetch' ? fetchData : generateData;
+            const currentData = section === 'fetch' ? fetchData : (section === 'generate' ? generateData : manualData);
             const totalPages = Math.ceil(currentData.length / itemsPerPage);
             if (newPage >= 1 && newPage <= totalPages) {
                 currentPage[section] = newPage;
@@ -565,12 +625,14 @@
                 fetchData = dataArray;
             } else if (section === 'generate') {
                 generateData = dataArray;
+            } else if (section === 'manual') {
+                manualData = dataArray;
             }
             
             // Apply default sort by category
             sortColumn[section] = 'category_code';
             sortDirection[section] = 'asc';
-            const currentData = section === 'fetch' ? fetchData : generateData;
+            const currentData = section === 'fetch' ? fetchData : (section === 'generate' ? generateData : manualData);
             currentData.sort((a, b) => {
                 const aVal = a[sortColumn[section]] || '';
                 const bVal = b[sortColumn[section]] || '';
@@ -655,7 +717,7 @@
         }
         
         async function exportData(section, format) {
-            const data = section === 'fetch' ? fetchData : generateData;
+            const data = section === 'fetch' ? fetchData : (section === 'generate' ? generateData : manualData);
             
             if (data.length === 0) {
                 alert('沒有資料可以匯出。請先產生資料。');
@@ -695,9 +757,82 @@
             }
         }
         
+        async function validateAndQueryCPE() {
+            const cpeInput = document.getElementById('manual-cpe').value.trim();
+            
+            if (!cpeInput) {
+                showAlert('manual', '請輸入 CPE 編號', 'error');
+                return;
+            }
+            
+            // Basic CPE format validation
+            if (!cpeInput.startsWith('cpe:2.3:')) {
+                showAlert('manual', 'CPE 格式錯誤，必須以 cpe:2.3: 開頭', 'error');
+                return;
+            }
+            
+            clearAlert('manual');
+            showLoading('manual');
+            
+            try {
+                // First validate and parse the CPE
+                const validateResponse = await fetch('/api/validate-cpe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cpe_string: cpeInput })
+                });
+                
+                const validateData = await validateResponse.json();
+                
+                if (!validateResponse.ok) {
+                    throw new Error(validateData.error || 'CPE 驗證失敗');
+                }
+                
+                // Now query for CVEs
+                const cveResponse = await fetch('/api/query-cve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ cpe_string: cpeInput })
+                });
+                
+                const cveData = await cveResponse.json();
+                
+                if (!cveResponse.ok) {
+                    // CVE query failed, but CPE is valid, so just show the CPE data
+                    displayResults('manual', [validateData]);
+                    showAlert('manual', 'CPE 驗證成功！但無法查詢 CVE 資料。', 'info');
+                } else {
+                    // Add CVE information to the validated CPE data
+                    validateData.cve_count = cveData.cve_count || 0;
+                    validateData.cves = cveData.cves || [];
+                    validateData.cve_summary = cveData.summary || '';
+                    validateData.query_successful = cveData.query_successful !== false;
+                    
+                    displayResults('manual', [validateData]);
+                    
+                    if (cveData.query_successful === false) {
+                        // Query failed but got a response
+                        showAlert('manual', `CPE 驗證成功！CVE 查詢失敗：${cveData.summary}`, 'info');
+                    } else if (cveData.cve_count > 0) {
+                        showAlert('manual', `CPE 驗證成功！找到 ${cveData.cve_count} 個相關的 CVE 漏洞。`, 'info');
+                    } else {
+                        showAlert('manual', 'CPE 驗證成功！未找到相關的 CVE 漏洞。', 'success');
+                    }
+                }
+            } catch (error) {
+                showAlert('manual', `錯誤：${error.message}`, 'error');
+            } finally {
+                hideLoading('manual');
+            }
+        }
+        
         async function exportAllData(format) {
-            // Combine data from both sections
-            const allData = [...fetchData, ...generateData];
+            // Combine data from all sections
+            const allData = [...fetchData, ...generateData, ...manualData];
             
             if (allData.length === 0) {
                 alert('沒有資料可以匯出。請先解析或產生 CPE 資料。');
@@ -744,6 +879,10 @@
         
         document.getElementById('generate-count').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') generateRandom();
+        });
+        
+        document.getElementById('manual-cpe').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') validateAndQueryCPE();
         });
     </script>
 </body>

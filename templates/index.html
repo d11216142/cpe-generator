@@ -285,6 +285,72 @@
         </div>
         
         <div class="content">
+            <!-- Database Connection Management Section -->
+            <div class="section">
+                <h2 class="section-title">資料庫連線管理</h2>
+                <p style="color: #666; margin-bottom: 20px;">管理本地或遠端的資料庫連線設定，並提供讀取及修改功能</p>
+                
+                <!-- Current Connection Display -->
+                <div id="current-connection-info" class="alert alert-info" style="margin-bottom: 20px;">
+                    <strong>目前連線：</strong> <span id="current-connection-name">尚未設定</span>
+                </div>
+                
+                <!-- New/Edit Connection Form -->
+                <div class="form-group">
+                    <label for="conn-name">連線名稱：</label>
+                    <input type="text" id="conn-name" placeholder="例如：Production DB, Test DB">
+                </div>
+                
+                <div class="form-group">
+                    <label for="conn-server">伺服器位址：</label>
+                    <input type="text" id="conn-server" placeholder="例如：localhost 或 192.168.1.100">
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        本地伺服器請輸入 localhost，遠端伺服器請輸入 IP 位址或主機名稱
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="conn-database">資料庫名稱：</label>
+                    <input type="text" id="conn-database" placeholder="例如：CPE_Database">
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="conn-trusted" style="margin-right: 8px; width: 18px; height: 18px;">
+                        <span>使用 Windows 驗證</span>
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        勾選此項將使用 Windows 驗證，否則需要輸入使用者名稱和密碼
+                    </small>
+                </div>
+                
+                <div id="sql-auth-fields">
+                    <div class="form-group">
+                        <label for="conn-username">使用者名稱：</label>
+                        <input type="text" id="conn-username" placeholder="SQL Server 使用者名稱">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="conn-password">密碼：</label>
+                        <input type="password" id="conn-password" placeholder="SQL Server 密碼">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-primary" onclick="testConnection()">🔍 測試連線</button>
+                    <button class="btn-success" onclick="saveConnection()">💾 儲存連線</button>
+                    <button class="btn-secondary" onclick="clearConnectionForm()">🔄 清除表單</button>
+                </div>
+                
+                <div id="db-alert" style="margin-top: 15px;"></div>
+                
+                <!-- Saved Connections List -->
+                <div style="margin-top: 30px;">
+                    <h3 style="color: #333; margin-bottom: 15px;">已儲存的連線</h3>
+                    <div id="connections-list"></div>
+                </div>
+            </div>
+            
             <!-- Section 1: Fetch and Parse CPE -->
             <div class="section">
                 <h2 class="section-title">功能一：CPE 編號擷取與解析</h2>
@@ -772,6 +838,251 @@
                 alert(`${format.toUpperCase()} 檔案已下載！`);
             } catch (error) {
                 alert(`匯出錯誤：${error.message}`);
+            }
+        }
+        
+        // Database Connection Management Functions
+        let currentConnections = {};
+        
+        // Load connections on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConnections();
+            
+            // Toggle SQL auth fields based on trusted connection checkbox
+            document.getElementById('conn-trusted').addEventListener('change', function() {
+                const sqlAuthFields = document.getElementById('sql-auth-fields');
+                if (this.checked) {
+                    sqlAuthFields.style.display = 'none';
+                } else {
+                    sqlAuthFields.style.display = 'block';
+                }
+            });
+        });
+        
+        async function loadConnections() {
+            try {
+                const response = await fetch('/api/db-connections');
+                const data = await response.json();
+                
+                if (data.connections) {
+                    currentConnections = data.connections;
+                    displayConnectionsList();
+                    
+                    // Update current connection info
+                    const currentConnName = data.current_connection || '尚未設定';
+                    document.getElementById('current-connection-name').textContent = currentConnName;
+                }
+            } catch (error) {
+                console.error('載入連線設定失敗:', error);
+            }
+        }
+        
+        function displayConnectionsList() {
+            const listContainer = document.getElementById('connections-list');
+            
+            if (Object.keys(currentConnections).length === 0) {
+                listContainer.innerHTML = '<p style="color: #666;">尚無已儲存的連線</p>';
+                return;
+            }
+            
+            let html = '<div style="display: grid; gap: 15px;">';
+            
+            for (const [name, config] of Object.entries(currentConnections)) {
+                const authType = config.trusted_connection ? 'Windows 驗證' : 'SQL Server 驗證';
+                html += `
+                    <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #e0e0e0;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <h4 style="color: #667eea; margin-bottom: 8px;">${name}</h4>
+                                <p style="margin: 4px 0; color: #666;"><strong>伺服器：</strong> ${config.server}</p>
+                                <p style="margin: 4px 0; color: #666;"><strong>資料庫：</strong> ${config.database}</p>
+                                <p style="margin: 4px 0; color: #666;"><strong>驗證方式：</strong> ${authType}</p>
+                                ${!config.trusted_connection ? `<p style="margin: 4px 0; color: #666;"><strong>使用者：</strong> ${config.username || 'N/A'}</p>` : ''}
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-direction: column;">
+                                <button class="btn-secondary" style="padding: 8px 15px; font-size: 0.9em;" onclick="editConnection('${name}')">✏️ 編輯</button>
+                                <button class="btn-success" style="padding: 8px 15px; font-size: 0.9em;" onclick="setCurrentConnection('${name}')">✅ 使用</button>
+                                <button class="btn-danger" style="padding: 8px 15px; font-size: 0.9em;" onclick="deleteConnection('${name}')">🗑️ 刪除</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            listContainer.innerHTML = html;
+        }
+        
+        async function testConnection() {
+            const config = getConnectionFormData();
+            
+            if (!config.server || !config.database) {
+                showDbAlert('請填寫必要欄位（伺服器位址、資料庫名稱）', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/db-connections/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showDbAlert('✅ ' + data.message, 'success');
+                } else {
+                    showDbAlert('❌ ' + data.message, 'error');
+                }
+            } catch (error) {
+                showDbAlert('測試連線時發生錯誤：' + error.message, 'error');
+            }
+        }
+        
+        async function saveConnection() {
+            const config = getConnectionFormData();
+            
+            if (!config.name || !config.server || !config.database) {
+                showDbAlert('請填寫必要欄位（連線名稱、伺服器位址、資料庫名稱）', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/db-connections', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showDbAlert('✅ ' + data.message, 'success');
+                    clearConnectionForm();
+                    loadConnections();
+                } else {
+                    showDbAlert('❌ ' + (data.error || '儲存失敗'), 'error');
+                }
+            } catch (error) {
+                showDbAlert('儲存連線時發生錯誤：' + error.message, 'error');
+            }
+        }
+        
+        async function deleteConnection(name) {
+            if (!confirm(`確定要刪除連線 "${name}" 嗎？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/db-connections/${encodeURIComponent(name)}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showDbAlert('✅ ' + data.message, 'success');
+                    loadConnections();
+                } else {
+                    showDbAlert('❌ ' + (data.error || '刪除失敗'), 'error');
+                }
+            } catch (error) {
+                showDbAlert('刪除連線時發生錯誤：' + error.message, 'error');
+            }
+        }
+        
+        async function setCurrentConnection(name) {
+            try {
+                const response = await fetch('/api/db-connections/set-current', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name: name })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showDbAlert('✅ ' + data.message, 'success');
+                    document.getElementById('current-connection-name').textContent = name;
+                } else {
+                    showDbAlert('❌ ' + (data.error || '設定失敗'), 'error');
+                }
+            } catch (error) {
+                showDbAlert('設定連線時發生錯誤：' + error.message, 'error');
+            }
+        }
+        
+        function editConnection(name) {
+            const config = currentConnections[name];
+            
+            if (config) {
+                document.getElementById('conn-name').value = name;
+                document.getElementById('conn-server').value = config.server;
+                document.getElementById('conn-database').value = config.database;
+                document.getElementById('conn-trusted').checked = config.trusted_connection;
+                document.getElementById('conn-username').value = config.username || '';
+                
+                // Don't show password for security
+                document.getElementById('conn-password').value = '';
+                document.getElementById('conn-password').placeholder = '如需修改請輸入新密碼，否則保持空白';
+                
+                // Trigger change event to show/hide SQL auth fields
+                document.getElementById('conn-trusted').dispatchEvent(new Event('change'));
+                
+                // Scroll to form
+                document.getElementById('conn-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        function clearConnectionForm() {
+            document.getElementById('conn-name').value = '';
+            document.getElementById('conn-server').value = '';
+            document.getElementById('conn-database').value = '';
+            document.getElementById('conn-trusted').checked = false;
+            document.getElementById('conn-username').value = '';
+            document.getElementById('conn-password').value = '';
+            document.getElementById('conn-password').placeholder = 'SQL Server 密碼';
+            document.getElementById('sql-auth-fields').style.display = 'block';
+            showDbAlert('', ''); // Clear alert
+        }
+        
+        function getConnectionFormData() {
+            return {
+                name: document.getElementById('conn-name').value.trim(),
+                server: document.getElementById('conn-server').value.trim(),
+                database: document.getElementById('conn-database').value.trim(),
+                trusted_connection: document.getElementById('conn-trusted').checked,
+                username: document.getElementById('conn-username').value.trim(),
+                password: document.getElementById('conn-password').value
+            };
+        }
+        
+        function showDbAlert(message, type) {
+            const alertDiv = document.getElementById('db-alert');
+            
+            if (!message) {
+                alertDiv.innerHTML = '';
+                return;
+            }
+            
+            const alertClass = type === 'success' ? 'alert-success' : 
+                              type === 'warning' ? 'alert-warning' : 
+                              type === 'error' ? 'alert-error' : 'alert-info';
+            
+            alertDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+            
+            // Auto-hide after 5 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    alertDiv.innerHTML = '';
+                }, 5000);
             }
         }
         

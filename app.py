@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from urllib.parse import quote
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
+from db_config import save_multiple_cpe_to_database
 
 app = Flask(__name__)
 
@@ -312,6 +313,9 @@ def auto_fetch_cpe():
         count = data.get('count', 10)
         count = min(max(1, count), 100)  # Limit between 1 and 100
         
+        # Check if data should be saved to database
+        save_to_db = data.get('save_to_db', False)
+        
         # Separate CPEs by category
         cpe_by_category = {'a': [], 'o': [], 'h': []}
         for cpe_string in CPE_DICTIONARY:
@@ -358,6 +362,18 @@ def auto_fetch_cpe():
                     # Add installation metadata
                     metadata = generate_installation_metadata()
                     results.append({**parsed, **metadata})
+        
+        # Save to database if requested
+        if save_to_db and results:
+            db_result = save_multiple_cpe_to_database(results)
+            return jsonify({
+                'data': results,
+                'database': {
+                    'saved': True,
+                    'success_count': db_result['success'],
+                    'failed_count': db_result['failed']
+                }
+            })
         
         return jsonify(results)
     except Exception as e:

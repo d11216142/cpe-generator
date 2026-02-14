@@ -291,6 +291,16 @@
                     </small>
                 </div>
                 
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="checkbox" id="save-to-db" checked style="margin-right: 8px; width: 18px; height: 18px;">
+                        <span>自動儲存到資料庫</span>
+                    </label>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        勾選後，抓取的 CPE 資料將自動儲存到 SQL Server 資料庫中。
+                    </small>
+                </div>
+                
                 <div class="button-group">
                     <button class="btn-primary" onclick="autoFetchCPE()">自動抓取 CPE</button>
                     <button class="btn-secondary" onclick="clearResults('fetch')">清除結果</button>
@@ -586,6 +596,7 @@
         
         async function autoFetchCPE() {
             const count = parseInt(document.getElementById('fetch-count').value);
+            const saveToDB = document.getElementById('save-to-db').checked;
             
             if (count < 1 || count > 100) {
                 showAlert('fetch', '數量必須在 1-100 之間', 'error');
@@ -601,7 +612,10 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ count })
+                    body: JSON.stringify({ 
+                        count: count,
+                        save_to_db: saveToDB
+                    })
                 });
                 
                 const data = await response.json();
@@ -610,10 +624,27 @@
                     throw new Error(data.error || '處理失敗');
                 }
                 
-                displayResults('fetch', data);
-                showAlert('fetch', `成功抓取並解析 ${data.length} 筆 CPE 資料！`, 'success');
+                // Check if database save results are present
+                if (data.database && data.database.saved) {
+                    const successMsg = `✅ 成功抓取並儲存 ${data.database.success_count} 筆資料到資料庫！`;
+                    const failMsg = data.database.failed_count > 0 ? 
+                        `<br>⚠️ ${data.database.failed_count} 筆儲存失敗` : '';
+                    showAlert('fetch', successMsg + failMsg, 'success');
+                    
+                    if (data.data && data.data.length > 0) {
+                        displayResults('fetch', data.data);
+                    }
+                } else {
+                    // Original handling logic
+                    if (data.length > 0) {
+                        displayResults('fetch', data);
+                        showAlert('fetch', `✅ 成功抓取 ${data.length} 筆 CPE 資料`, 'success');
+                    } else {
+                        showAlert('fetch', '⚠️ 未找到符合的 CPE 資料', 'info');
+                    }
+                }
             } catch (error) {
-                showAlert('fetch', `錯誤：${error.message}`, 'error');
+                showAlert('fetch', `❌ 錯誤：${error.message}`, 'error');
             } finally {
                 hideLoading('fetch');
             }

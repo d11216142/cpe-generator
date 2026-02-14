@@ -4,6 +4,14 @@
 
 ## 功能特色
 
+### 資料庫連線管理
+1. 支援新增本地或遠端的資料庫連線設定
+2. 可儲存多個資料庫連線配置
+3. 支援 Windows 驗證與 SQL Server 驗證兩種方式
+4. 提供連線測試功能，確保連線設定正確
+5. 可隨時切換、編輯或刪除已儲存的連線
+6. 連線資訊安全儲存，密碼在介面上會被遮蔽
+
 ### 功能一：CPE 編號擷取與解析
 1. 透過 CPE 字典自動抓取 CPE 編號
 2. 分析該 CPE 編號是否真實，如果否，將其刪除並繼續下一筆
@@ -55,7 +63,22 @@ python app.py
 
 ### 使用介面
 
-1. **自動抓取 CPE 編號**
+1. **資料庫連線管理**
+   - 在「資料庫連線管理」區塊設定資料庫連線
+   - 輸入連線名稱（例如：Production DB, Test DB）
+   - 輸入伺服器位址（本地：localhost，遠端：IP 位址或主機名稱）
+   - 輸入資料庫名稱
+   - 選擇驗證方式：
+     - 勾選「使用 Windows 驗證」：使用當前 Windows 帳號
+     - 不勾選：需輸入 SQL Server 使用者名稱和密碼
+   - 點擊「測試連線」確認設定正確
+   - 點擊「儲存連線」保存配置
+   - 在「已儲存的連線」列表中可以：
+     - 編輯：修改連線設定
+     - 使用：切換到該連線
+     - 刪除：移除該連線配置
+
+2. **自動抓取 CPE 編號**
    - 在「功能一」區塊輸入要抓取的數量 (預設 10，可調整為 1-100)
    - 點擊「自動抓取 CPE」按鈕
    - 系統會自動從 CPE 字典中隨機抓取指定數量的 CPE 編號
@@ -73,6 +96,42 @@ python app.py
    - 在解析或產生 CPE 資料後
    - 點擊「下載 CSV 檔案」按鈕
    - CSV 檔案會自動下載到您的電腦
+
+## 資料庫配置說明
+
+### 連線資訊儲存
+- 資料庫連線配置儲存在 `db_connections.json` 檔案中
+- 此檔案已加入 `.gitignore`，不會被提交到版本控制系統
+- 連線資訊包含：連線名稱、伺服器位址、資料庫名稱、驗證方式、使用者名稱、密碼
+
+### 安全建議
+⚠️ **重要安全提醒**：
+- 不要將包含實際密碼的 `db_connections.json` 檔案分享給他人
+- 在生產環境中，建議使用 Windows 驗證而非 SQL Server 驗證
+- 確保資料庫伺服器已設定適當的防火牆規則
+- 定期更新資料庫密碼並限制存取權限
+
+### 資料庫需求
+- 支援 Microsoft SQL Server
+- 需要安裝 ODBC Driver 17 for SQL Server 或更高版本
+- pyodbc 套件（已包含在 requirements.txt）
+
+## API 端點說明
+
+### 資料庫連線管理 API
+- `GET /api/db-connections` - 取得所有已儲存的連線
+- `POST /api/db-connections` - 新增資料庫連線
+- `PUT /api/db-connections/<name>` - 更新現有連線
+- `DELETE /api/db-connections/<name>` - 刪除連線
+- `POST /api/db-connections/test` - 測試連線
+- `POST /api/db-connections/set-current` - 設定當前使用的連線
+
+### CPE 相關 API
+- `POST /api/auto-fetch-cpe` - 自動抓取 CPE 編號
+- `POST /api/generate-random` - 產生隨機 CPE
+- `POST /api/export-csv` - 匯出 CSV
+- `POST /api/export-xlsx` - 匯出 XLSX
+- `POST /api/export-json` - 匯出 JSON
 
 ## 技術架構
 

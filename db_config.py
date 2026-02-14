@@ -305,12 +305,13 @@ def save_cpe_to_database(cpe_data):
     try:
         cursor = conn.cursor()
         
-        # 使用常數作為資料表名稱，這是安全的（非使用者輸入）
-        insert_query = f"""
-        INSERT INTO {CPE_RECORDS_TABLE} 
-        (vendor, product_name, version, other_fields, size_mb, install_date, install_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """
+        # 使用常數作為資料表名稱（非使用者輸入），因此是安全的
+        # 使用參數化查詢來防止 SQL 注入
+        insert_query = (
+            "INSERT INTO " + CPE_RECORDS_TABLE + " "
+            "(vendor, product_name, version, other_fields, size_mb, install_date, install_path) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )
         
         cursor.execute(insert_query, (
             cpe_data.get('vendor', ''),
@@ -329,10 +330,11 @@ def save_cpe_to_database(cpe_data):
     except pyodbc.Error as e:
         error_msg = f"❌ 儲存到資料庫失敗\n\n錯誤訊息: {str(e)}\n\n"
         
-        # 檢查是否為資料表不存在的錯誤
-        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE.lower() in str(e).lower():
+        # 檢查是否為資料表不存在的錯誤 (SQL Server 錯誤碼 208)
+        # 僅當錯誤訊息包含 'invalid object name' 時才提供建立資料表的建議
+        if 'invalid object name' in str(e).lower():
             error_msg += "💡 建議:\n"
-            error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 不存在\n"
+            error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 可能不存在\n"
             error_msg += "   • 請使用以下 SQL 指令建立資料表：\n\n"
             error_msg += f"   CREATE TABLE {CPE_RECORDS_TABLE} (\n"
             error_msg += "       id INT PRIMARY KEY IDENTITY(1,1),\n"
@@ -382,12 +384,13 @@ def save_multiple_cpe_to_database(cpe_list):
     try:
         cursor = conn.cursor()
         
-        # 使用常數作為資料表名稱，這是安全的（非使用者輸入）
-        insert_query = f"""
-        INSERT INTO {CPE_RECORDS_TABLE} 
-        (vendor, product_name, version, other_fields, size_mb, install_date, install_path)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-        """
+        # 使用常數作為資料表名稱（非使用者輸入），因此是安全的
+        # 使用參數化查詢來防止 SQL 注入
+        insert_query = (
+            "INSERT INTO " + CPE_RECORDS_TABLE + " "
+            "(vendor, product_name, version, other_fields, size_mb, install_date, install_path) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )
         
         # Prepare data for batch insertion
         data_to_insert = [
@@ -419,10 +422,11 @@ def save_multiple_cpe_to_database(cpe_list):
     except pyodbc.Error as e:
         error_msg = f"❌ 批次儲存失敗\n\n錯誤訊息: {str(e)}\n\n"
         
-        # 檢查是否為資料表不存在的錯誤
-        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE.lower() in str(e).lower():
+        # 檢查是否為資料表不存在的錯誤 (SQL Server 錯誤碼 208)
+        # 僅當錯誤訊息包含 'invalid object name' 時才提供建立資料表的建議
+        if 'invalid object name' in str(e).lower():
             error_msg += "💡 建議:\n"
-            error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 不存在\n"
+            error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 可能不存在\n"
             error_msg += "   • 請使用以下 SQL 指令建立資料表：\n\n"
             error_msg += f"   CREATE TABLE {CPE_RECORDS_TABLE} (\n"
             error_msg += "       id INT PRIMARY KEY IDENTITY(1,1),\n"

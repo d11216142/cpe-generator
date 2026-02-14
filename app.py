@@ -9,7 +9,14 @@ from datetime import datetime, timedelta
 from urllib.parse import quote
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from db_config import save_multiple_cpe_to_database
+from db_config import (
+    save_multiple_cpe_to_database, 
+    load_db_connections, 
+    save_db_connections,
+    test_db_connection,
+    set_current_db_config,
+    get_current_db_config
+)
 
 app = Flask(__name__)
 
@@ -610,6 +617,179 @@ def export_json():
             as_attachment=True,
             download_name=f'cpe_data_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
         )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/db-connections', methods=['GET'])
+def get_db_connections():
+    """取得所有已儲存的資料庫連線"""
+    try:
+        connections = load_db_connections()
+        # 隱藏密碼資訊
+        safe_connections = {}
+        for name, config in connections.items():
+            safe_config = config.copy()
+            if 'password' in safe_config:
+                safe_config['password'] = '***' if safe_config['password'] else ''
+            safe_connections[name] = safe_config
+        
+        current_config = get_current_db_config()
+        return jsonify({
+            'connections': safe_connections,
+            'current_connection': current_config.get('name', 'default') if current_config else 'default'
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/db-connections', methods=['POST'])
+def add_db_connection():
+    """新增或更新資料庫連線設定"""
+    try:
+        data = request.json
+        name = data.get('name')
+        
+        if not name:
+            return jsonify({'error': '連線名稱為必填項目'}), 400
+        
+        # 驗證必要欄位
+        required_fields = ['server', 'database']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} 為必填項目'}), 400
+        
+        # 載入現有連線
+        connections = load_db_connections()
+        
+        # 建立連線配置
+        connection_config = {
+            'name': name,
+            'server': data.get('server'),
+            'database': data.get('database'),
+            'username': data.get('username', ''),
+            'password': data.get('password', ''),
+            'trusted_connection': data.get('trusted_connection', False)
+        }
+        
+        # 儲存連線
+        connections[name] = connection_config
+        
+        if save_db_connections(connections):
+            return jsonify({
+                'success': True,
+                'message': f'連線 "{name}" 已儲存'
+            })
+        else:
+            return jsonify({'error': '儲存連線失敗'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/db-connections/<name>', methods=['PUT'])
+def update_db_connection(name):
+    """更新資料庫連線設定"""
+    try:
+        data = request.json
+        connections = load_db_connections()
+        
+        if name not in connections:
+            return jsonify({'error': f'連線 "{name}" 不存在'}), 404
+        
+        # 更新連線配置
+        connection_config = connections[name]
+        if 'server' in data:
+            connection_config['server'] = data['server']
+        if 'database' in data:
+            connection_config['database'] = data['database']
+        if 'username' in data:
+            connection_config['username'] = data['username']
+        if 'password' in data and data['password']:  # Only update password if provided
+            connection_config['password'] = data['password']
+        if 'trusted_connection' in data:
+            connection_config['trusted_connection'] = data['trusted_connection']
+        
+        connections[name] = connection_config
+        
+        if save_db_connections(connections):
+            return jsonify({
+                'success': True,
+                'message': f'連線 "{name}" 已更新'
+            })
+        else:
+            return jsonify({'error': '更新連線失敗'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/db-connections/<name>', methods=['DELETE'])
+def delete_db_connection(name):
+    """刪除資料庫連線設定"""
+    try:
+        connections = load_db_connections()
+        
+        if name not in connections:
+            return jsonify({'error': f'連線 "{name}" 不存在'}), 404
+        
+        del connections[name]
+        
+        if save_db_connections(connections):
+            return jsonify({
+                'success': True,
+                'message': f'連線 "{name}" 已刪除'
+            })
+        else:
+            return jsonify({'error': '刪除連線失敗'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/db-connections/test', methods=['POST'])
+def test_connection():
+    """測試資料庫連線"""
+    try:
+        data = request.json
+        
+        # 驗證必要欄位
+        required_fields = ['server', 'database']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} 為必填項目'}), 400
+        
+        # 建立測試配置
+        test_config = {
+            'server': data.get('server'),
+            'database': data.get('database'),
+            'username': data.get('username', ''),
+            'password': data.get('password', ''),
+            'trusted_connection': data.get('trusted_connection', False)
+        }
+        
+        success, message = test_db_connection(test_config)
+        
+        return jsonify({
+            'success': success,
+            'message': message
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/db-connections/set-current', methods=['POST'])
+def set_current_connection():
+    """設定目前使用的資料庫連線"""
+    try:
+        data = request.json
+        name = data.get('name')
+        
+        if not name:
+            return jsonify({'error': '連線名稱為必填項目'}), 400
+        
+        connections = load_db_connections()
+        
+        if name not in connections:
+            return jsonify({'error': f'連線 "{name}" 不存在'}), 404
+        
+        set_current_db_config(connections[name])
+        
+        return jsonify({
+            'success': True,
+            'message': f'已切換至連線 "{name}"'
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

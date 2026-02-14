@@ -15,7 +15,9 @@ from db_config import (
     save_db_connections,
     test_db_connection,
     set_current_db_config,
-    get_current_db_config
+    get_current_db_config,
+    is_localhost,
+    ALLOWED_LOCALHOST_NAMES
 )
 
 app = Flask(__name__)
@@ -376,9 +378,10 @@ def auto_fetch_cpe():
             return jsonify({
                 'data': results,
                 'database': {
-                    'saved': True,
+                    'saved': db_result['success'] > 0,
                     'success_count': db_result['success'],
-                    'failed_count': db_result['failed']
+                    'failed_count': db_result['failed'],
+                    'message': db_result.get('message', '')
                 }
             })
         
@@ -657,6 +660,19 @@ def add_db_connection():
             if not data.get(field):
                 return jsonify({'error': f'{field} 為必填項目'}), 400
         
+        # 驗證伺服器位址是否為本地主機
+        server = data.get('server')
+        if not is_localhost(server):
+            error_msg = f"❌ 安全限制：此應用程式僅支援連線到本地資料庫\n"
+            error_msg += f"您嘗試設定的伺服器: {server}\n\n"
+            error_msg += "🔒 允許的本地伺服器位址:\n"
+            for allowed in ALLOWED_LOCALHOST_NAMES:
+                error_msg += f"   • {allowed}\n"
+            error_msg += "\n💡 建議:\n"
+            error_msg += "   • 請將伺服器位址改為 'localhost' 或 '127.0.0.1'\n"
+            error_msg += "   • 如果您使用 SQL Server Express，可以嘗試 'localhost\\SQLEXPRESS'\n"
+            return jsonify({'error': error_msg}), 400
+        
         # 載入現有連線
         connections = load_db_connections()
         
@@ -696,6 +712,18 @@ def update_db_connection(name):
         # 更新連線配置
         connection_config = connections[name]
         if 'server' in data:
+            # 驗證伺服器位址是否為本地主機
+            server = data['server']
+            if not is_localhost(server):
+                error_msg = f"❌ 安全限制：此應用程式僅支援連線到本地資料庫\n"
+                error_msg += f"您嘗試設定的伺服器: {server}\n\n"
+                error_msg += "🔒 允許的本地伺服器位址:\n"
+                for allowed in ALLOWED_LOCALHOST_NAMES:
+                    error_msg += f"   • {allowed}\n"
+                error_msg += "\n💡 建議:\n"
+                error_msg += "   • 請將伺服器位址改為 'localhost' 或 '127.0.0.1'\n"
+                error_msg += "   • 如果您使用 SQL Server Express，可以嘗試 'localhost\\SQLEXPRESS'\n"
+                return jsonify({'error': error_msg}), 400
             connection_config['server'] = data['server']
         if 'database' in data:
             connection_config['database'] = data['database']

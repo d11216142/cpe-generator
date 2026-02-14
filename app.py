@@ -15,7 +15,9 @@ from db_config import (
     save_db_connections,
     test_db_connection,
     set_current_db_config,
-    get_current_db_config
+    get_current_db_config,
+    is_localhost,
+    ALLOWED_LOCALHOST_NAMES
 )
 
 app = Flask(__name__)
@@ -659,7 +661,6 @@ def add_db_connection():
                 return jsonify({'error': f'{field} 為必填項目'}), 400
         
         # 驗證伺服器位址是否為本地主機
-        from db_config import is_localhost, ALLOWED_LOCALHOST_NAMES
         server = data.get('server')
         if not is_localhost(server):
             error_msg = f"❌ 安全限制：此應用程式僅支援連線到本地資料庫\n"
@@ -712,7 +713,6 @@ def update_db_connection(name):
         connection_config = connections[name]
         if 'server' in data:
             # 驗證伺服器位址是否為本地主機
-            from db_config import is_localhost, ALLOWED_LOCALHOST_NAMES
             server = data['server']
             if not is_localhost(server):
                 error_msg = f"❌ 安全限制：此應用程式僅支援連線到本地資料庫\n"

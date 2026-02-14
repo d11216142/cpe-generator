@@ -33,6 +33,10 @@ ALLOWED_LOCALHOST_NAMES = [
     '(localdb)\\mssqllocaldb'
 ]
 
+# 資料庫連線設定常數
+CONNECTION_TIMEOUT = 10  # 連線超時秒數
+CPE_RECORDS_TABLE = 'cpe_records'  # CPE 記錄資料表名稱
+
 # 用於儲存動態配置的檔案
 DB_CONFIG_FILE = 'db_connections.json'
 
@@ -226,7 +230,7 @@ def get_db_connection(config=None):
                 f"PWD={db_config['password']};"
             )
         
-        conn = pyodbc.connect(connection_string, timeout=10)
+        conn = pyodbc.connect(connection_string, timeout=CONNECTION_TIMEOUT)
         return conn, None
     except pyodbc.Error as e:
         error_msg = f"❌ 資料庫連線失敗\n\n"
@@ -301,8 +305,8 @@ def save_cpe_to_database(cpe_data):
     try:
         cursor = conn.cursor()
         
-        insert_query = """
-        INSERT INTO cpe_records 
+        insert_query = f"""
+        INSERT INTO {CPE_RECORDS_TABLE} 
         (vendor, product_name, version, other_fields, size_mb, install_date, install_path)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         """
@@ -325,11 +329,11 @@ def save_cpe_to_database(cpe_data):
         error_msg = f"❌ 儲存到資料庫失敗\n\n錯誤訊息: {str(e)}\n\n"
         
         # 檢查是否為資料表不存在的錯誤
-        if 'invalid object name' in str(e).lower() or 'cpe_records' in str(e).lower():
+        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE in str(e).lower():
             error_msg += "💡 建議:\n"
-            error_msg += "   • 資料表 'cpe_records' 不存在\n"
+            error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 不存在\n"
             error_msg += "   • 請使用以下 SQL 指令建立資料表：\n\n"
-            error_msg += "   CREATE TABLE cpe_records (\n"
+            error_msg += f"   CREATE TABLE {CPE_RECORDS_TABLE} (\n"
             error_msg += "       id INT PRIMARY KEY IDENTITY(1,1),\n"
             error_msg += "       vendor NVARCHAR(255),\n"
             error_msg += "       product_name NVARCHAR(255),\n"
@@ -377,8 +381,8 @@ def save_multiple_cpe_to_database(cpe_list):
     try:
         cursor = conn.cursor()
         
-        insert_query = """
-        INSERT INTO cpe_records 
+        insert_query = f"""
+        INSERT INTO {CPE_RECORDS_TABLE} 
         (vendor, product_name, version, other_fields, size_mb, install_date, install_path)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         """
@@ -414,11 +418,11 @@ def save_multiple_cpe_to_database(cpe_list):
         error_msg = f"❌ 批次儲存失敗\n\n錯誤訊息: {str(e)}\n\n"
         
         # 檢查是否為資料表不存在的錯誤
-        if 'invalid object name' in str(e).lower() or 'cpe_records' in str(e).lower():
+        if 'invalid object name' in str(e).lower() or CPE_RECORDS_TABLE in str(e).lower():
             error_msg += "💡 建議:\n"
-            error_msg += "   • 資料表 'cpe_records' 不存在\n"
+            error_msg += f"   • 資料表 '{CPE_RECORDS_TABLE}' 不存在\n"
             error_msg += "   • 請使用以下 SQL 指令建立資料表：\n\n"
-            error_msg += "   CREATE TABLE cpe_records (\n"
+            error_msg += f"   CREATE TABLE {CPE_RECORDS_TABLE} (\n"
             error_msg += "       id INT PRIMARY KEY IDENTITY(1,1),\n"
             error_msg += "       vendor NVARCHAR(255),\n"
             error_msg += "       product_name NVARCHAR(255),\n"

@@ -210,6 +210,12 @@
             border-left: 5px solid #28a745;
         }
         
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 5px solid #ffc107;
+        }
+        
         .alert-info {
             background: #d1ecf1;
             color: #0c5460;
@@ -629,7 +635,8 @@
                     const successMsg = `✅ 成功抓取並儲存 ${data.database.success_count} 筆資料到資料庫！`;
                     const failMsg = data.database.failed_count > 0 ? 
                         `<br>⚠️ ${data.database.failed_count} 筆儲存失敗` : '';
-                    showAlert('fetch', successMsg + failMsg, 'success');
+                    const alertType = data.database.failed_count > 0 ? 'warning' : 'success';
+                    showAlert('fetch', successMsg + failMsg, alertType);
                     
                     if (data.data && data.data.length > 0) {
                         displayResults('fetch', data.data);

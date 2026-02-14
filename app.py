@@ -701,7 +701,7 @@ def update_db_connection(name):
             connection_config['database'] = data['database']
         if 'username' in data:
             connection_config['username'] = data['username']
-        if 'password' in data:
+        if 'password' in data and data['password']:  # Only update password if provided
             connection_config['password'] = data['password']
         if 'trusted_connection' in data:
             connection_config['trusted_connection'] = data['trusted_connection']

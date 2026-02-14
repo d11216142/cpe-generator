@@ -885,32 +885,89 @@
                 return;
             }
             
-            let html = '<div style="display: grid; gap: 15px;">';
+            listContainer.innerHTML = '';
             
             for (const [name, config] of Object.entries(currentConnections)) {
                 const authType = config.trusted_connection ? 'Windows 驗證' : 'SQL Server 驗證';
-                html += `
-                    <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #e0e0e0;">
-                        <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div style="flex: 1;">
-                                <h4 style="color: #667eea; margin-bottom: 8px;">${name}</h4>
-                                <p style="margin: 4px 0; color: #666;"><strong>伺服器：</strong> ${config.server}</p>
-                                <p style="margin: 4px 0; color: #666;"><strong>資料庫：</strong> ${config.database}</p>
-                                <p style="margin: 4px 0; color: #666;"><strong>驗證方式：</strong> ${authType}</p>
-                                ${!config.trusted_connection ? `<p style="margin: 4px 0; color: #666;"><strong>使用者：</strong> ${config.username || 'N/A'}</p>` : ''}
-                            </div>
-                            <div style="display: flex; gap: 8px; flex-direction: column;">
-                                <button class="btn-secondary" style="padding: 8px 15px; font-size: 0.9em;" onclick="editConnection('${name}')">✏️ 編輯</button>
-                                <button class="btn-success" style="padding: 8px 15px; font-size: 0.9em;" onclick="setCurrentConnection('${name}')">✅ 使用</button>
-                                <button class="btn-danger" style="padding: 8px 15px; font-size: 0.9em;" onclick="deleteConnection('${name}')">🗑️ 刪除</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                
+                const connDiv = document.createElement('div');
+                connDiv.className = 'connection-item';
+                connDiv.style.cssText = 'background: white; padding: 15px; border-radius: 8px; border: 2px solid #e0e0e0; margin-bottom: 15px;';
+                
+                const innerDiv = document.createElement('div');
+                innerDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: start;';
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.style.flex = '1';
+                
+                const h4 = document.createElement('h4');
+                h4.style.cssText = 'color: #667eea; margin-bottom: 8px;';
+                h4.textContent = name;
+                infoDiv.appendChild(h4);
+                
+                const serverP = document.createElement('p');
+                serverP.style.cssText = 'margin: 4px 0; color: #666;';
+                serverP.innerHTML = '<strong>伺服器：</strong> ';
+                const serverSpan = document.createElement('span');
+                serverSpan.textContent = config.server;
+                serverP.appendChild(serverSpan);
+                infoDiv.appendChild(serverP);
+                
+                const dbP = document.createElement('p');
+                dbP.style.cssText = 'margin: 4px 0; color: #666;';
+                dbP.innerHTML = '<strong>資料庫：</strong> ';
+                const dbSpan = document.createElement('span');
+                dbSpan.textContent = config.database;
+                dbP.appendChild(dbSpan);
+                infoDiv.appendChild(dbP);
+                
+                const authP = document.createElement('p');
+                authP.style.cssText = 'margin: 4px 0; color: #666;';
+                authP.innerHTML = '<strong>驗證方式：</strong> ';
+                const authSpan = document.createElement('span');
+                authSpan.textContent = authType;
+                authP.appendChild(authSpan);
+                infoDiv.appendChild(authP);
+                
+                if (!config.trusted_connection) {
+                    const userP = document.createElement('p');
+                    userP.style.cssText = 'margin: 4px 0; color: #666;';
+                    userP.innerHTML = '<strong>使用者：</strong> ';
+                    const userSpan = document.createElement('span');
+                    userSpan.textContent = config.username || 'N/A';
+                    userP.appendChild(userSpan);
+                    infoDiv.appendChild(userP);
+                }
+                
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.style.cssText = 'display: flex; gap: 8px; flex-direction: column;';
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn-secondary';
+                editBtn.style.cssText = 'padding: 8px 15px; font-size: 0.9em;';
+                editBtn.textContent = '✏️ 編輯';
+                editBtn.addEventListener('click', () => editConnection(name));
+                buttonsDiv.appendChild(editBtn);
+                
+                const useBtn = document.createElement('button');
+                useBtn.className = 'btn-success';
+                useBtn.style.cssText = 'padding: 8px 15px; font-size: 0.9em;';
+                useBtn.textContent = '✅ 使用';
+                useBtn.addEventListener('click', () => setCurrentConnection(name));
+                buttonsDiv.appendChild(useBtn);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn-danger';
+                deleteBtn.style.cssText = 'padding: 8px 15px; font-size: 0.9em;';
+                deleteBtn.textContent = '🗑️ 刪除';
+                deleteBtn.addEventListener('click', () => deleteConnection(name));
+                buttonsDiv.appendChild(deleteBtn);
+                
+                innerDiv.appendChild(infoDiv);
+                innerDiv.appendChild(buttonsDiv);
+                connDiv.appendChild(innerDiv);
+                listContainer.appendChild(connDiv);
             }
-            
-            html += '</div>';
-            listContainer.innerHTML = html;
         }
         
         async function testConnection() {

@@ -359,6 +359,61 @@ def save_cpe_to_database(cpe_data):
             conn.close()
         return False, error_msg
 
+def get_cpe_from_database():
+    """
+    從資料庫取得所有 CPE 記錄
+
+    Returns:
+        tuple: (records: list, error_message: str)
+            - records: CPE 記錄列表
+            - error_message: 錯誤訊息（如果成功則為 None）
+    """
+    conn, error_msg = get_db_connection()
+    if not conn:
+        return [], error_msg if error_msg else "無法連線到資料庫"
+
+    try:
+        cursor = conn.cursor()
+
+        # 使用常數作為資料表名稱（非使用者輸入），因此是安全的
+        select_query = (
+            "SELECT id, vendor, product_name, version, other_fields, "
+            "size_mb, install_date, install_path "
+            "FROM " + CPE_RECORDS_TABLE
+        )
+        cursor.execute(select_query)
+
+        columns = [column[0] for column in cursor.description]
+        records = []
+        for row in cursor.fetchall():
+            record = dict(zip(columns, row))
+            vendor = (record.get('vendor') or '').lower().replace(' ', '_')
+            product = (record.get('product_name') or '').lower().replace(' ', '_')
+            version = record.get('version') or '*'
+            record['cpe'] = f"cpe:2.3:a:{vendor}:{product}:{version}:*:*:*:*:*:*:*"
+            record['product'] = record.get('product_name', '')
+            # Convert date to string to ensure compatibility with all serialisation formats
+            if record.get('install_date') is not None:
+                record['install_date'] = str(record['install_date'])
+            records.append(record)
+
+        cursor.close()
+        conn.close()
+        return records, None
+    except pyodbc.Error as e:
+        error_msg = f"❌ 查詢資料庫失敗\n\n錯誤訊息: {str(e)}\n\n"
+        error_msg += get_error_suggestion(str(e))
+        if conn:
+            conn.close()
+        return [], error_msg
+    except Exception as e:
+        error_msg = f"❌ 發生未預期的錯誤\n\n錯誤訊息: {str(e)}\n\n"
+        error_msg += get_error_suggestion(str(e))
+        if conn:
+            conn.close()
+        return [], error_msg
+
+
 def save_multiple_cpe_to_database(cpe_list):
     """
     批次將多筆 CPE 資料儲存到資料庫

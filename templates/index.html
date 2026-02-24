@@ -271,11 +271,29 @@
             color: #667eea;
         }
         
-        .stats-label {
-            color: #666;
-            margin-top: 5px;
+        .btn-danger {
+            background: #dc3545;
+            color: white;
         }
-    </style>
+        
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+        }
+        .severity-CRITICAL { background: #dc3545; }
+        .severity-HIGH     { background: #fd7e14; }
+        .severity-MEDIUM   { background: #ffc107; color: #333; }
+        .severity-LOW      { background: #28a745; }
+        .severity-NA       { background: #aaaaaa; }
 </head>
 <body>
     <div class="container">
@@ -427,6 +445,35 @@
                 </div>
             </div>
             
+            <!-- Section 3: Vulnerability Comparison -->
+            <div class="section" style="border-left-color: #dc3545;">
+                <h2 class="section-title">功能三：CPE 漏洞比對</h2>
+                <p style="color: #666; margin-bottom: 20px;">
+                    從資料庫取出已儲存的 CPE 資料，與 NVD 漏洞資料庫進行比對，
+                    並將比對結果顯示於畫面上，同時可儲存成報表。
+                </p>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="compareVulnerabilities()">🔍 開始漏洞比對</button>
+                    <button class="btn-secondary" onclick="clearResults('compare')">🔄 清除結果</button>
+                </div>
+
+                <div id="compare-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px;">比對中，請稍候...</p>
+                </div>
+
+                <div id="compare-alert"></div>
+                <div id="compare-results" class="results hidden"></div>
+
+                <!-- Export buttons for Feature 3 -->
+                <div id="compare-export" class="button-group hidden" style="margin-top: 20px;">
+                    <button class="btn-success" onclick="exportReport('csv')">📥 下載 CSV 報表</button>
+                    <button class="btn-success" onclick="exportReport('xlsx')">📥 下載 XLSX 報表</button>
+                    <button class="btn-success" onclick="exportReport('json')">📥 下載 JSON 報表</button>
+                </div>
+            </div>
+
             <!-- Export Section - Combined Data -->
             <div class="section" style="background: #e8f5e9; border-left-color: #28a745;">
                 <h2 class="section-title">📥 匯出所有資料</h2>
@@ -479,9 +526,11 @@
             } else if (section === 'generate') {
                 generateData = [];
                 currentPage.generate = 1;
+            } else if (section === 'compare') {
+                compareData = [];
             }
         }
-        
+
         function sortData(column, section) {
             const currentData = section === 'fetch' ? fetchData : generateData;
             
@@ -1153,6 +1202,151 @@
         });
         
         // Feature 3: CVE-CPE functions
-    </script>
+        let compareData = [];
+
+        async function compareVulnerabilities() {
+            clearAlert('compare');
+            showLoading('compare');
+
+            try {
+                const response = await fetch('/api/compare-vulnerabilities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '比對失敗');
+                }
+
+                compareData = data.results || [];
+                displayCompareResults(data);
+
+                const msg = `✅ 比對完成：共 ${data.total_cpe} 筆 CPE，發現 ${data.total_cve} 筆漏洞`;
+                showAlert('compare', msg, 'success');
+                document.getElementById('compare-export').classList.remove('hidden');
+            } catch (error) {
+                showAlert('compare', `❌ 錯誤：${error.message}`, 'error');
+            } finally {
+                hideLoading('compare');
+            }
+        }
+
+        function severityBadge(severity) {
+            const s = (severity || 'N/A').toUpperCase();
+            const cls = ['CRITICAL','HIGH','MEDIUM','LOW'].includes(s) ? s : 'NA';
+            return `<span class="severity-badge severity-${cls}">${s}</span>`;
+        }
+
+        function displayCompareResults(data) {
+            const resultsDiv = document.getElementById('compare-results');
+            if (!data.results || data.results.length === 0) {
+                showAlert('compare', '⚠️ 沒有比對結果', 'info');
+                return;
+            }
+
+            const totalMatched = data.results.filter(r => r.cve_count > 0).length;
+            let html = `
+                <div class="row" style="margin-bottom: 20px;">
+                    <div class="stats">
+                        <div class="stats-number">${data.total_cpe}</div>
+                        <div class="stats-label">比對 CPE 數</div>
+                    </div>
+                    <div class="stats">
+                        <div class="stats-number">${totalMatched}</div>
+                        <div class="stats-label">有漏洞的 CPE</div>
+                    </div>
+                    <div class="stats">
+                        <div class="stats-number">${data.total_cve}</div>
+                        <div class="stats-label">總漏洞數</div>
+                    </div>
+                </div>
+            `;
+
+            data.results.forEach(item => {
+                const hasVulns = item.vulnerabilities && item.vulnerabilities.length > 0;
+                const headerBg = hasVulns ? '#fff3cd' : '#d4edda';
+                const headerBorder = hasVulns ? '#ffc107' : '#28a745';
+
+                html += `
+                    <div style="margin-bottom: 20px; border: 2px solid ${headerBorder}; border-radius: 8px; overflow: hidden;">
+                        <div style="background: ${headerBg}; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-family: monospace;">${item.cpe}</strong>
+                                <span style="margin-left: 15px; color: #555;">${item.vendor} / ${item.product} ${item.version}</span>
+                            </div>
+                            <span style="font-weight: bold; color: ${hasVulns ? '#dc3545' : '#28a745'};">
+                                ${hasVulns ? `⚠️ ${item.cve_count} 筆漏洞` : '✅ 無已知漏洞'}
+                            </span>
+                        </div>
+                `;
+
+                if (hasVulns) {
+                    html += `
+                        <div class="table-container" style="margin: 0;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>CVE ID</th>
+                                        <th>嚴重等級</th>
+                                        <th>CVSS 分數</th>
+                                        <th>描述</th>
+                                        <th>發布日期</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    item.vulnerabilities.forEach(vuln => {
+                        html += `
+                            <tr>
+                                <td style="font-family: monospace; white-space: nowrap;">${vuln.cve_id}</td>
+                                <td>${severityBadge(vuln.severity)}</td>
+                                <td>${vuln.cvss_score !== null ? vuln.cvss_score : '-'}</td>
+                                <td style="font-size: 0.9em;">${vuln.description}</td>
+                                <td style="white-space: nowrap;">${vuln.published_date}</td>
+                            </tr>
+                        `;
+                    });
+                    html += `</tbody></table></div>`;
+                }
+
+                html += `</div>`;
+            });
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.remove('hidden');
+        }
+
+        async function exportReport(format) {
+            if (compareData.length === 0) {
+                alert('沒有比對結果可以匯出，請先執行漏洞比對。');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/export-report-${format}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ results: compareData })
+                });
+
+                if (!response.ok) {
+                    throw new Error('匯出失敗');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `vulnerability_report_${new Date().getTime()}.${format}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                alert(`匯出錯誤：${error.message}`);
+            }
+        }
 </body>
 </html>

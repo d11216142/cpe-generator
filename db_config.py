@@ -36,8 +36,6 @@ ALLOWED_LOCALHOST_NAMES = [
 # 資料庫連線設定常數
 CONNECTION_TIMEOUT = 10  # 連線超時秒數
 CPE_RECORDS_TABLE = 'cpe_records'  # CPE 記錄資料表名稱
-CVE_CPE_TABLE = 'cve_cpe_records'  # CVE-CPE 對應記錄資料表名稱
-
 # 用於儲存動態配置的檔案
 DB_CONFIG_FILE = 'db_connections.json'
 
@@ -360,91 +358,6 @@ def save_cpe_to_database(cpe_data):
         if conn:
             conn.close()
         return False, error_msg
-
-def save_cve_cpe_to_database(cve_cpe_list):
-    """
-    將從 CVE 擷取的 CPE 資料批次儲存到資料庫
-
-    Args:
-        cve_cpe_list: 包含 cve_id、cpe_uri、vulnerable 欄位的字典列表
-
-    Returns:
-        dict: {'success': 成功筆數, 'failed': 失敗筆數, 'message': 訊息}
-    """
-    conn, error_msg = get_db_connection()
-    if not conn:
-        return {
-            'success': 0,
-            'failed': len(cve_cpe_list),
-            'message': error_msg if error_msg else "無法連線到資料庫"
-        }
-
-    try:
-        cursor = conn.cursor()
-
-        # 使用常數作為資料表名稱（非使用者輸入），因此是安全的
-        # 使用參數化查詢來防止 SQL 注入
-        insert_query = (
-            "INSERT INTO " + CVE_CPE_TABLE + " "
-            "(cve_id, cpe_uri, vulnerable) "
-            "VALUES (?, ?, ?)"
-        )
-
-        data_to_insert = [
-            (
-                item.get('cve_id', ''),
-                item.get('cpe_uri', ''),
-                1 if item.get('vulnerable', False) else 0
-            )
-            for item in cve_cpe_list
-        ]
-
-        cursor.executemany(insert_query, data_to_insert)
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return {
-            'success': len(cve_cpe_list),
-            'failed': 0,
-            'message': f"✅ 成功儲存 {len(cve_cpe_list)} 筆 CVE-CPE 資料到資料庫"
-        }
-    except pyodbc.Error as e:
-        error_msg = f"❌ 批次儲存失敗\n\n錯誤訊息: {str(e)}\n\n"
-
-        # 僅當錯誤訊息包含 'invalid object name' 時才提供建立資料表的建議
-        if 'invalid object name' in str(e).lower():
-            error_msg += "💡 建議:\n"
-            error_msg += f"   • 資料表 '{CVE_CPE_TABLE}' 可能不存在\n"
-            error_msg += "   • 請使用以下 SQL 指令建立資料表：\n\n"
-            error_msg += f"   CREATE TABLE {CVE_CPE_TABLE} (\n"
-            error_msg += "       id INT PRIMARY KEY IDENTITY(1,1),\n"
-            error_msg += "       cve_id NVARCHAR(50),\n"
-            error_msg += "       cpe_uri NVARCHAR(500),\n"
-            error_msg += "       vulnerable BIT,\n"
-            error_msg += "       created_at DATETIME DEFAULT GETDATE()\n"
-            error_msg += "   );\n"
-        else:
-            error_msg += get_error_suggestion(str(e))
-
-        if conn:
-            conn.close()
-        return {
-            'success': 0,
-            'failed': len(cve_cpe_list),
-            'message': error_msg
-        }
-    except Exception as e:
-        error_msg = f"❌ 發生未預期的錯誤\n\n錯誤訊息: {str(e)}\n\n"
-        error_msg += get_error_suggestion(str(e))
-        if conn:
-            conn.close()
-        return {
-            'success': 0,
-            'failed': len(cve_cpe_list),
-            'message': error_msg
-        }
-
 
 def save_multiple_cpe_to_database(cpe_list):
     """

@@ -10,7 +10,8 @@ from urllib.parse import quote
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from db_config import (
-    save_multiple_cpe_to_database, 
+    save_multiple_cpe_to_database,
+    save_cve_cpe_to_database,
     load_db_connections, 
     save_db_connections,
     test_db_connection,
@@ -820,6 +821,119 @@ def set_current_connection():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+MAX_NVD_RESULTS_PER_PAGE = 2000  # NVD API maximum results per page
+
+
+def fetch_cve_cpe_from_nvd(year, results_per_page=20):
+    """
+    利用 NVD API 抓取指定年份的 CVE 資料，並從中提取 CPE 編號
+
+    Args:
+        year: 西元年份 (int)，用於過濾 CVE 發布日期
+        results_per_page: 每次請求的最大筆數 (int，最大 2000)
+
+    Returns:
+        list: 包含 cve_id、cpe_uri、vulnerable 欄位的字典列表
+    """
+    try:
+        start_date = f"{year}-01-01T00:00:00.000"
+        end_date = f"{year}-12-31T23:59:59.999"
+
+        url = NVD_API_URL
+        params = {
+            "pubStartDate": start_date,
+            "pubEndDate": end_date,
+            "resultsPerPage": min(int(results_per_page), MAX_NVD_RESULTS_PER_PAGE)
+        }
+        headers = {"Accept": "application/json"}
+
+        response = requests.get(url, params=params, headers=headers, timeout=30)
+        response.raise_for_status()
+
+        nvd_data = response.json()
+        vulnerabilities = nvd_data.get("vulnerabilities", [])
+
+        cve_cpe_list = []
+        for vuln in vulnerabilities:
+            cve = vuln.get("cve", {})
+            cve_id = cve.get("id", "")
+            configurations = cve.get("configurations", [])
+
+            for config in configurations:
+                for node in config.get("nodes", []):
+                    for cpe_match in node.get("cpeMatch", []):
+                        cpe_uri = cpe_match.get("criteria", "")
+                        if cpe_uri:
+                            cve_cpe_list.append({
+                                "cve_id": cve_id,
+                                "cpe_uri": cpe_uri,
+                                "vulnerable": cpe_match.get("vulnerable", False)
+                            })
+
+        return cve_cpe_list, None
+    except requests.exceptions.Timeout:
+        return [], "NVD API 請求超時，請稍後再試"
+    except requests.exceptions.RequestException as e:
+        return [], f"NVD API 請求失敗: {str(e)}"
+    except Exception as e:
+        return [], f"處理 NVD 資料時發生錯誤: {str(e)}"
+
+
+@app.route('/api/fetch-cve-cpe', methods=['POST'])
+def fetch_cve_cpe():
+    """
+    功能三：利用 NVD API 抓取歷年 CVE 的 CPE 編號，並儲存到資料庫
+    Expected input: year (int), results_per_page (int), save_to_db (bool)
+    """
+    try:
+        data = request.json
+        year = data.get('year')
+        results_per_page = data.get('results_per_page', 20)
+        save_to_db = data.get('save_to_db', False)
+
+        # Validate year
+        current_year = datetime.now().year
+        if not year or not isinstance(year, int) or year < 1999 or year > current_year:
+            return jsonify({'error': f'年份必須介於 1999 至 {current_year} 之間'}), 400
+
+        # Validate results_per_page
+        results_per_page = min(max(1, int(results_per_page)), MAX_NVD_RESULTS_PER_PAGE)
+
+        # Fetch CVE-CPE data from NVD API
+        cve_cpe_list, error = fetch_cve_cpe_from_nvd(year, results_per_page)
+        if error:
+            return jsonify({'error': error}), 502
+
+        if not cve_cpe_list:
+            return jsonify({
+                'data': [],
+                'total': 0,
+                'message': f'{year} 年沒有找到包含 CPE 資訊的 CVE 資料'
+            })
+
+        # Save to database if requested
+        if save_to_db:
+            db_result = save_cve_cpe_to_database(cve_cpe_list)
+            return jsonify({
+                'data': cve_cpe_list,
+                'total': len(cve_cpe_list),
+                'database': {
+                    'saved': db_result['success'] > 0,
+                    'success_count': db_result['success'],
+                    'failed_count': db_result['failed'],
+                    'message': db_result.get('message', '')
+                }
+            })
+
+        return jsonify({
+            'data': cve_cpe_list,
+            'total': len(cve_cpe_list)
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     # Note: For production deployment, set debug=False and use a production WSGI server
